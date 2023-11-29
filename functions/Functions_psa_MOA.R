@@ -15,14 +15,12 @@ compoundCorrelationdf <- function(comp1, conc1, pert_itime1 = "0min", project_id
   #For reference based predictions, correlation matrix: unknowns on columns & knowns on rows
   #for refernce-free predictions, correlation matrix should be square: unknowns on columns & on rows
   #comptablepath is the compound table for the unknown screen
-  #1/29/20 add comptable_path2 is optional, and is the compound table for the kabx screen, if it is different from comptable_path are different.
+  #comptable_path2 is optional, and is the compound table for the kabx screen, if it is different from comptable_path are different.
   #tanimoto only works if both the query and the kabx are in the same tanimoto matrices
   #1/30/20 add cormatrix_path2 which should have the query compound correlated to its other concentrations in the same screen. It is optional, since this may be included in the first cormatrixpath
   #Warning: If cormatrix_path2 is not present, it will try assign compoundcorrelation = 1 for the query. If query is already present in cormatrixpath1, it will assume it is the correct one (from the same screen)
-  #Need to be careful if a compound from kabx2 was screened again in another screen--will extract information from cormatrix_path1, if cormatrix_path2 is NA, which if the treatment does exist in 2 screens, would be erroneous
   #timepoint1 = time point (pert_itime), now comp_conc is comp_conc_time
-  
-  #doesn't include the query compound's correlation to it's other doses if it's not in the columns...do we want to add this?
+  #doesn't include the query compound's correlation to it's other doses if it's not in the columns
   
   query_compconc = paste(project_id1, comp1, conc1, pert_itime1, strain_id1, sep = ":") #comp1 = pert_id, conc1 = pert_idose
   
@@ -191,14 +189,11 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
   #CompoundCorrelation column corresponds to correlation with original query compound
   #1/10/20 edit. Second item in return list is the compound correlations within the entire community
   #1/29/20 edit. add comp1, conc1, which are the query compound and concentration, need to obtain from other correlation matrix
-  #2/13/20 edit to accomodate cases where a known is correlated with a known from a different screen
-  
-  #*Note: As written, this function is not suitable for cases where want to keep correlation for different doses of the same query compound if it is not in the kabx2 screen. 
-  #Should probably only be used for reference-based MOA
+  #2/13/20 edit to accommodate cases where a known is correlated with a known from a different screen
   
   #query
   # query_compconc = paste(project_id1, comp1, conc1, pert_itime1, strain_id1, sep = ":")
-  query_compconc = tolower(paste(project_id1, comp1, conc1, strain_id1, pert_itime1, sep = ":")) #3/23/23
+  query_compconc = tolower(paste(project_id1, comp1, conc1, strain_id1, pert_itime1, sep = ":")) 
   
   cormatrix_rowmeta = read_gctx_meta(cormatrix_path, dim = "row")
   cormatrix_colmeta = read_gctx_meta(cormatrix_path, dim = "col")
@@ -217,7 +212,6 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
     #     }
   }
   
-  # if((query_compconc %in% cormatrix_rowmeta$id) & (query_compconc %in% cormatrix_colmeta$id) & (length(cormatrix_rowmeta$id)==length(cormatrix_colmeta$id))){
   #Assume a symmetric correlation matrix with unknown and kabx compounds
   if(all(cormatrix_colmeta$id %in% cormatrix_rowmeta$id)){
     #all columns are in the rows
@@ -260,18 +254,10 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
       
       print("no neighbors")
       cormatrix_filt_upper= 1
-      # cormatrix_filt = matrix(c(finaltable_filt$CompoundCorrelation), nrow = 1, ncol = 1)
-      # rownames(cormatrix_filt)[1] = query_compconc #should use id
-      # colnames(cormatrix_filt)[1] = query_compconc
-      # 
-      # cormatrix_filt_upper = matrix(c(1), nrow = 1, ncol = 1)
-      # rownames(cormatrix_filt_upper)[1] = query_compconc
-      # colnames(cormatrix_filt_upper)[1] = query_compconc
-    }
+      }
   }
   
   #Replace the 1 for the query compound
-  
   colmedian = apply(cormatrix_filt_upper, 2, FUN = substitute(metric), na.rm = T)
   test = apply(cormatrix_filt_upper, 2, FUN = median, na.rm = T)
   idxend_all = which(colmedian <= metricThreshold)  #Choose up to the first compound that has median low compCor with rest of compounds in group
@@ -307,20 +293,12 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
     cormatrixfilt2_df = filter(cormatrixfilt2_df, !is.na(CommunityCorrelation))
   }
   
-  # pdf('/broad/hptmp/jbagnall/cormatrix_K71125014.pdf', width = 70, height = 50)
-  # pheatmap(cormatrix_filt)
-  # dev.off()
-  
   #This gives correlations to all compounds within the community
   cormatrixfilt_df = as.data.frame(cormatrix_filt[1:idxend, 1:idxend])
   rownames(cormatrixfilt_df) = rownames(cormatrix_filt)[1:idxend]
   colnames(cormatrixfilt_df) = colnames(cormatrix_filt)[1:idxend]
   cormatrixfilt_df = gather(cormatrixfilt_df, key = "id", value = "CompoundCorrelation")
-  # cormatrixfilt_df$comp_conc =factor(cormatrixfilt_df$comp_conc, levels = unique(cormatrixfilt_df$comp_conc))
-  #   ggplot(cormatrixfilt_df, aes(x = comp_conc, y = CompoundCorrelation))+
-  #     geom_point()+
-  #     theme_bw()+
-  #     theme(axis.text.x = element_text(angle = 90))
+
   
   numcompconc = length(unique(cormatrixfilt_df$id))
   cormatrixfilt_df = cormatrixfilt_df %>%
@@ -328,11 +306,8 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
     group_by(id) %>%
     summarise(medianCompCor = median(CompoundCorrelation), avgCompCor = mean(CompoundCorrelation, na.rm = T), minCompCor = min(CompoundCorrelation, na.rm = T), maxCompCor = max(CompoundCorrelation, na.rm = T)) %>%
     ungroup()
-  #     summarise(medianCompCor = median(CompoundCorrelation), avgCompCor = (sum(CompoundCorrelation)-1)/(numcompconc -1), minCompCor = min(CompoundCorrelation, na.rm = T)) %>%
-  #     ungroup()
-  
-  
-  #Add cormatrix_filt_upper?
+
+
   #This gives the correlation to the compounds up to that point (not to all compounds in community)
   cormatrixfilt_df_sub = as.data.frame(cormatrix_filt_upper[1:idxend, 1:idxend])
   rownames(cormatrixfilt_df_sub) = rownames(cormatrix_filt)[1:idxend]
@@ -349,13 +324,6 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
   comb_df = full_join(finaltable_filt, cormatrixfilt_df, by = "id") #changed from right join to full_join 2/28/20
   comb_df = left_join(comb_df, cormatrixfilt_df_sub, by = "id")
   
-  # comb_df = left_join(cormatrixfilt_df, finaltable_filt, by  = "comp_conc")
-  # comb_df$comp_conc =factor(comb_df$comp_conc, levels = unique(comb_df$comp_conc))
-  #   ggplot(comb_df, aes(x = comp_conc, y = avgCompCor, color = as.factor(medianCompCor > 0.5)))+
-  #     geom_point()+
-  #     theme_bw()+
-  #     theme(axis.text.x = element_text(angle = 90))
-  
   comb_df = arrange(comb_df, desc(CompoundCorrelation))
   
   return_list = list()
@@ -366,7 +334,7 @@ compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strai
 }
 
 targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, metadata, target_colname1 = "pert_mechanism", target_colname2 = "pert_target", savefilename = NA, removequery = F){
-  #6/3/22 Adapted from screening data function. For reference-based MOA predictions
+  #For reference-based MOA predictions
   #cormatrix_path is the correlation matrix between the query treatments (on columns) and the kabx2 knowns (on rows)
   #query_ids are the ids of the query treatments, if NA then takes all columns
   #reference_ids are the ids of the reference treatments (should match the ids in cormatrix), if NA then takes all rows
@@ -435,17 +403,14 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
 
 }
 
-refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_cor = F, kabx_annopath= "", target_col = "pert_mechanism", roc_path = '/idi/cgtb/jbagnall/psa_RNAseq/poscon_correlation/R_datafiles/kabx_rocinfo_compound_include_singles_220607_pert_mechanism.rds', tani_path = '', tani_roc_path = '', savefilename, avg_doses = T, print_plot = F, save_all_target_cor = T){
+refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_cor = F, kabx_annopath= "", target_col = "pert_mechanism", roc_path = '', savefilename, avg_doses = T, print_plot = F, save_all_target_cor = T){
   #6/7/22 List prediction for each compound(pert_id)
-  ###2/13/20 Need to adjust to new column names from targetCorrelation
-  #target_list is the output of targetCorrelation, where every query_pert_id has been correlated to a maximum from a target category from kabx2
+  #target_list is the output of targetCorrelation, where every query_pert_id has been correlated to a maximum from a target category from reference
   #it can either be a list or a data frame
   #normalized_cor == T, then uses ranks for the mean normalized correlation values (instead of the mean of the actual correlation values)
-  #Should I make these optional inputs to define a high confidence region? norm_compcor_thresh = 0.95, compcor_thresh = 0.8
-  #if anno_name_change == T, then changes annotation columns to new names (1/31/22)
   #target_col should match the name of target column1 from targetCorrelation (used to define target)
-  #annotatoin file requires pert_type = poscon, negcon or test. defines "unknowns" as "test" compounds
-  #if avg_doses = T, then wil use the mean of the correlations across doses (this is default). If F, then will use the max across all doses.
+  #annotation file requires pert_type = poscon, negcon or test. defines "unknowns" as "test" compounds
+  #if avg_doses = T, then will use the mean of the correlations across doses (this is default). If F, then will use the max across all doses.
   #if save_all_target_cor = T, then will save RDS files of max correlations to all targets, useful for plotting purposes later
   
   #outputs top ranked target predictions
@@ -461,23 +426,11 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
     kabx_annotation = kabx_annopath
   }
   
-  
-  #   kabx_categories = kabx_annotation 
-  #   # kabx_categories = replace(kabx_categories, kabx_categories == "-666", "unknown")
-  #   kabx_categories = kabx_categories %>%  
-  #     select(target_gene, target_details, target_protein_enzyme_or_complex, target_process) %>%
-  #     distinct() %>%
-  #     group_by(target_details) %>%
-  #     summarise(target_gene = paste(unique(target_gene), collapse = "|"), target_protein_enzyme_or_complex = paste(unique(target_protein_enzyme_or_complex), collapse = "|"), target_process = paste(unique(target_process), collapse = "|")) %>%
-  #     ungroup()
-  
-  
   kabx_anno_collapse = kabx_annotation %>%
     group_by(pert_id) %>%
     summarise(pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism ), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|"), pert_type = paste(unique(pert_type), collapse = "|")) %>%
     ungroup() %>% 
     distinct()
-  
   
   target_df = readRDS(target_list_path)
   if(any(class(target_df) == "list")){
@@ -584,7 +537,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       print(p0)
     }
     
-    #Add FDR from kabx2 set
+    #Add FDR from reference set
     if(is.na(roc_path)|roc_path == ""){
       unknown_df_output$threshold_idx = NA
       unknown_df_output$fdr = NA
@@ -607,53 +560,20 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       mutate(neighbor_pert_id = ifelse(grepl("BRD", pert_id), substr(pert_id, 1, 13), pert_id))
     unknown_df_output_anno = left_join(unknown_df_output_anno, kabx_anno_collapse, by = c("neighbor_pert_id" = "pert_id"))
     
-    #Add tanimoto information if given
-    if(tani_path != ''){
-      row_meta = read.gctx.meta(tani_path, dimension = "row")
-      col_meta = read.gctx.meta(tani_path, dimension = "col")
-      
-      
-      unknown_df_output_anno = unknown_df_output_anno %>%
-        group_by(query_pert_id, neighbor_pert_id) %>%
-        mutate(tanimoto = ifelse((query_pert_id %in% row_meta$id) & (neighbor_pert_id %in% col_meta$id), as.numeric(parse.gctx(tani_path, rid = which(row_meta$id == query_pert_id), cid = which(col_meta$id == neighbor_pert_id))@mat), NaN)) %>%
-        ungroup()
-    }else{
-      unknown_df_output_anno$tanimoto = NaN
-    }
     
     #collapse neighbors again
     unknown_df_output_anno = select(unknown_df_output_anno, -target_rank_norm, -target_rank_notnorm, -threshold_idx, -fdr)
     
     unknown_df_output_anno = unknown_df_output_anno %>%
       group_by(query_pert_id, kabx_target, mean_compcor, mean_compcor_norm, precision) %>%
-      summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|"), max_tani = max(tanimoto, na.rm = T), mean_tani = mean(tanimoto, na.rm = T), median_tani = median(tanimoto, na.rm = T)) %>%
+      summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
-    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class", "max_tani", "mean_tani", "median_tani")
+    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
     
-    
-    
-    if(tani_path != ''){
-      #Add max_tanimoto fdr/precision information from kabx2 set
-      tani_rocinfo = readRDS(tani_roc_path)
-      
-      # test = unknown_df_output
-      unknown_df_output_anno$threshold_idx = sapply(unknown_df_output_anno$max_tani, function(x){max(which(x > tani_rocinfo$threshold))})
-      unknown_df_output_anno$fraction_correct_kabx2_tani = tani_rocinfo$precision[unknown_df_output_anno$threshold_idx]
-      unknown_df_output_anno = select(unknown_df_output_anno, -threshold_idx)
-    }else{
-      unknown_df_output_anno$fraction_correct_kabx2_tani = NA
-    }
     unknown_df_output_anno = arrange(unknown_df_output_anno, desc(target_correlation))
     
     write.csv(unknown_df_output_anno, paste(savefilename, "_unknown.csv", sep = ''), row.names = F)
-    
-    
-    #   unknown_df_output_anno = left_join(unknown_df_output, kabx_categories, by = c("target" = "target_details"))
-    #   unknown_df_output_anno = select(unknown_df_output_anno, -target_rank_norm, -target_rank_notnorm, -threshold_idx, -fdr)
-    #   colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "predicted_target_gene", "predicted_target_protein_enzyme_or_complex", "predicted_target_process")
-    #   unknown_df_output_anno = arrange(unknown_df_output_anno, desc(target_correlation))
-    #   write.csv(unknown_df_output_anno, paste(savefilename, "_unknown.csv", sep = ''), row.names = F)
-    
+
     #Distribution of predicted targets
     if(print_plot){
       target_summary = unknown_df_output_anno %>%
@@ -793,10 +713,10 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
     
     known_df_output_anno = known_df_output_anno %>%
       group_by(query_pert_id, kabx_target, mean_compcor, mean_compcor_norm, precision, query_pert_iname, query_pert_mechanism, query_pert_target, query_pharmaceutical_class) %>%
-      summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|"), max_tani = max(tanimoto, na.rm = T), mean_tani = mean(tanimoto, na.rm = T), median_tani = median(tanimoto, na.rm = T)) %>%
+      summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
     
-    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class", "max_tani", "mean_tani", "median_tani")
+    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
     
     known_df_output_anno = arrange(known_df_output_anno, desc(target_correlation))
     
@@ -806,34 +726,6 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       mutate(same_target = grepl(predicted_target, query_target, fixed = T)) %>%
       ungroup
     colnames(known_df_output_anno[colnames(known_df_output_anno) == "query_target"]) = paste0("query_", target_col)
-    #   known_df_output_anno = left_join(known_df_output_anno, kabx_categories, by = c("target"="target_details"))
-    #   known_df_output_anno = mutate(known_df_output_anno, same_target = target == query_target_details, same_process = query_target_process == target_process)
-    #   colnames(known_df_output_anno) = c("query_pert_id", "predicted_target","target_correlation", "normalized_target_correlation", "target_rank_norm", "target_rank_notnorm", "threshold_idx", "fraction_incorrect_in_kabx2", "fraction_correct_in_kabx2", "query_pert_iname", "query_target_gene", "query_target_details", "query_target_protein_enzyme_or_complex", "query_target_process", "predicted_target_gene", "predicted_target_protein_enzyme_or_complex", "predicted_target_process", "same_target", "same_process")
-    #   known_df_output_anno = select(known_df_output_anno, -fraction_incorrect_in_kabx2, -target_rank_norm, -target_rank_notnorm, -threshold_idx)
-    #   known_df_output_anno = arrange(known_df_output_anno, desc(target_correlation))
-    
-    if(tani_path != ''){
-      #Add max_tanimoto fdr/precision information from kabx2 set
-      tani_rocinfo = readRDS(tani_roc_path)
-      
-      # test = unknown_df_output
-      known_df_output_anno$threshold_idx = sapply(known_df_output_anno$max_tani, function(x){max(which(x > tani_rocinfo$threshold))})
-      known_df_output_anno$fraction_correct_kabx2_tani = tani_rocinfo$precision[known_df_output_anno$threshold_idx]
-      known_df_output_anno = select(known_df_output_anno, -threshold_idx)
-    }else{
-      known_df_output_anno$fraction_correct_kabx2_tani = NA
-    }
-    
-    if(print_plot & tani_path != ''){
-      p3 = ggplot(known_df_output_anno, aes(x = target_correlation, y = max_tani, color = same_target))+
-        geom_point()+
-        labs(x = "Average correlation", y = "Max Tanimoto", title = "Knowns")+
-        xlim(0,1)+
-        ylim(0,1)+
-        theme_bw(base_size = 16)
-      print(p3)
-    }
-
     write.csv(known_df_output_anno, paste(savefilename, "_known.csv", sep = ""), row.names = F)
   }
 }
@@ -926,7 +818,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_line(colour = "black"), strip.text = element_blank())
   
-  print(p0)
+  # print(p0)
   
   
   #Color the points by Mechanism
@@ -941,7 +833,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, colour = color_vec))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank(),
           panel.background = element_blank(), axis.line = element_line(colour = "black"))
-  print(p1)
+  # print(p1)
   
   plot_list = list(p0, p1)
   
@@ -949,7 +841,8 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     pdf(save_file_path, width = 7, height = 5)
     print(p0)
     dev.off()
+  }else{
+    return(plot_list)
   }
   
-  return(plot_list)
 }
