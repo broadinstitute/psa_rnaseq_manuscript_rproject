@@ -1,0 +1,17 @@
+condition_id,pert_id,pert_dose,pert_idose,pert_dose_unit,pert_iname,pert_itime,pert_time,pert_time_unit,project_id,strain_id,x_dose_mic_high_inoculum,vehicle,comb_id,inactive,dose_rank,id
+MOCP_0110:ara:0.50000%:PA14_c26:270min:A,ara,0.5,0.50%,%,Arabinose,270min,270,min,mocp_0110,PA14_c26,NA,water,270min:3,FALSE,4,MOCP_0110:ara:0.50000%:PA14_c26:270min:A
+MOCP_0110:ara:0.12500%:PA14_c26:270min:A,ara,0.125,0.13%,%,Arabinose,270min,270,min,mocp_0110,PA14_c26,NA,water,270min:3,FALSE,3,MOCP_0110:ara:0.12500%:PA14_c26:270min:A
+MOCP_0110:ara:0.03125%:PA14_c26:270min:A,ara,0.0312,0.03%,%,Arabinose,270min,270,min,mocp_0110,PA14_c26,NA,water,270min:3,FALSE,2,MOCP_0110:ara:0.03125%:PA14_c26:270min:A
+MOCP_0110:ara:0.00000%:PA14_c26:270min:A,ara,0,0.00%,%,Arabinose,270min,270,min,mocp_0110,PA14_c26,NA,water,270min:3,FALSE,1,MOCP_0110:ara:0.00000%:PA14_c26:270min:A
+MOCP_0110:ara:0.50000%:PA14_dhfR_c117:270min:A,ara,0.5,0.50%,%,Arabinose,270min,270,min,mocp_0110,PA14_dhfR_c117,NA,water,270min:3,FALSE,4,MOCP_0110:ara:0.50000%:PA14_dhfR_c117:270min:A
+MOCP_0110:ara:0.12500%:PA14_dhfR_c117:270min:A,ara,0.125,0.13%,%,Arabinose,270min,270,min,mocp_0110,PA14_dhfR_c117,NA,water,270min:3,TRUE,3,MOCP_0110:ara:0.12500%:PA14_dhfR_c117:270min:A
+MOCP_0110:ara:0.03125%:PA14_dhfR_c117:270min:A,ara,0.0312,0.03%,%,Arabinose,270min,270,min,mocp_0110,PA14_dhfR_c117,NA,water,270min:3,TRUE,2,MOCP_0110:ara:0.03125%:PA14_dhfR_c117:270min:A
+MOCP_0110:ara:0.00000%:PA14_dhfR_c117:270min:A,ara,0,0.00%,%,Arabinose,270min,270,min,mocp_0110,PA14_dhfR_c117,NA,water,270min:3,TRUE,1,MOCP_0110:ara:0.00000%:PA14_dhfR_c117:270min:A
+MOCP_0110:ara:0.50000%:PA14_murA_c119:270min:A,ara,0.5,0.50%,%,Arabinose,270min,270,min,mocp_0110,PA14_murA_c119,NA,water,270min:3,FALSE,4,MOCP_0110:ara:0.50000%:PA14_murA_c119:270min:A
+MOCP_0110:ara:0.12500%:PA14_murA_c119:270min:A,ara,0.125,0.13%,%,Arabinose,270min,270,min,mocp_0110,PA14_murA_c119,NA,water,270min:3,FALSE,3,MOCP_0110:ara:0.12500%:PA14_murA_c119:270min:A
+MOCP_0110:ara:0.03125%:PA14_murA_c119:270min:A,ara,0.0312,0.03%,%,Arabinose,270min,270,min,mocp_0110,PA14_murA_c119,NA,water,270min:3,FALSE,2,MOCP_0110:ara:0.03125%:PA14_murA_c119:270min:A
+MOCP_0110:ara:0.00000%:PA14_murA_c119:270min:A,ara,0,0.00%,%,Arabinose,270min,270,min,mocp_0110,PA14_murA_c119,NA,water,270min:3,FALSE,1,MOCP_0110:ara:0.00000%:PA14_murA_c119:270min:A
+MOCP_0110:ara:0.50000%:PA14_lpxC_c165:270min:A,ara,0.5,0.50%,%,Arabinose,270min,270,min,mocp_0110,PA14_lpxC_c165,NA,water,270min:3,FALSE,4,MOCP_0110:ara:0.50000%:PA14_lpxC_c165:270min:A
+MOCP_0110:ara:0.12500%:PA14_lpxC_c165:270min:A,ara,0.125,0.13%,%,Arabinose,270min,270,min,mocp_0110,PA14_lpxC_c165,NA,water,270min:3,FALSE,3,MOCP_0110:ara:0.12500%:PA14_lpxC_c165:270min:A
+MOCP_0110:ara:0.03125%:PA14_lpxC_c165:270min:A,ara,0.0312,0.03%,%,Arabinose,270min,270,min,mocp_0110,PA14_lpxC_c165,NA,water,270min:3,FALSE,2,MOCP_0110:ara:0.03125%:PA14_lpxC_c165:270min:A
+MOCP_0110:ara:0.00000%:PA14_lpxC_c165:270min:A,ara,0,0.00%,%,Arabinose,270min,270,min,mocp_0110,PA14_lpxC_c165,NA,water,270min:3,FALSE,1,MOCP_0110:ara:0.00000%:PA14_lpxC_c165:270min:A

@@ -1,0 +1,4 @@
+"condition_id","pert_id","pert_dose","pert_idose","pert_dose_unit","project_id","strain_id","comb_id","id"
+"PRJNA701395:dmso:0ug_mL:PA14","dmso",0,"0ug_mL","ug_mL","prjna701395","PA14","prjna701395","PRJNA701395:dmso:0ug_mL:PA14"
+"PRJNA701395:lomefloxacin:0.3ug_mL:PA14","lomefloxacin",0.3,"0.3ug_mL","ug_mL","prjna701395","PA14","prjna701395","PRJNA701395:lomefloxacin:0.3ug_mL:PA14"
+"PRJNA701395:novobiocin:213ug_mL:PA14","novobiocin",213,"213ug_mL","ug_mL","prjna701395","PA14","prjna701395","PRJNA701395:novobiocin:213ug_mL:PA14"

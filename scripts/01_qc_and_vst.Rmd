@@ -1,0 +1,290 @@
+---
+title: "Prep for moderated z-score"
+output: html_notebook
+---
+
+jbagnall@broadinstitute.org</br>
+Nov. 27, 2023</br>
+Prep RNAseq data before calculating the moderated z-score based on RNAseq data. This notebook performs the points below: <br />
+<ol>
+  <li>Extract CD</li>
+  <li>Adjust metadata</li>
+  <li>QC raw counts</li>
+  <li>Run VST</li></ol>
+
+```{r, setup, include=FALSE}
+wkdir = '/broad/hptmp/jbagnall/GSE166602/'
+
+# Make sure directories exist, otherwise create them
+end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
+if(end_char != "/"){
+  wkdir = paste0(wkdir, '/')
+}
+
+if(dir.exists(wkdir)){
+  setwd(wkdir)
+  knitr::opts_knit$set(root.dir = wkdir) #This needs to be in the setup chunk to make it global for all chunks
+}else{
+  stop("Working directory does not exist")
+}
+print(paste0("Working directory: ", getwd()))
+```
+
+
+
+## Load libraries & data paths
+```{r, include=FALSE}
+library(cmapR)
+library(dplyr)
+source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_psa_rnaseq_processing.R')
+source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_general.R')
+source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_mod_z_score.R')
+
+count_path = '/broad/hptmp/jbagnall/GSE166602/GSE166602_cds_count_table.rds'
+counts_include_cds_only = TRUE #If true, does not need to extract cds from gene labels
+outdir = '/broad/hptmp/jbagnall/GSE166602/'
+run_name = "GSE166602"
+project_id0 = "PRJNA701395"
+
+end_char = substr(outdir, nchar(outdir), nchar(outdir))
+if(end_char != "/"){
+  outdir = paste0(outdir, '/')
+}
+
+if(!dir.exists(outdir)){
+  print("Creating output directory")
+  dir.create(outdir)
+}
+
+getwd()
+
+#Gene metadata
+gene_meta_path = '/idi/cgtb/jbagnall/psa_RNAseq/annotation/gene_metadata_pao1_kegg_JB_220613.rds'
+gene_meta = readRDS(gene_meta_path)
+
+#Sample metadata
+sample_meta_path = '/idi/hunglabusers/jbagnall/psa_RNAseq_external/GSE166602/SraRunTable_bioproject_PRJNA701395_JB.csv'
+sample_meta = read.csv(sample_meta_path, stringsAsFactors = F)
+
+#Compound metadata, may add if desired
+
+```
+
+
+## 1) Extract coding sequences only (CDS)
+```{r}
+#Assumes the gene name has "CDS" in it to extract coding reads
+#check if file exists already
+if(counts_include_cds_only){
+  cds_count_path = count_path
+}else{
+  cds_count_path = paste0(outdir, run_name, '_counts_cds.rds')
+  if(file.exists(cds_count_path)){
+    print("CDS counts already extracted previously")
+  }else{
+  extract_cds(count_path, savefilepath = cds_count_path)
+  }
+}
+
+
+```
+
+
+## 2) Adjust metadata
+### Load CDS reads
+```{r}
+cds_counts = readRDS(cds_count_path)
+dim(cds_counts)
+```
+
+### Add gene metadata and adjust row names
+```{r}
+#Gene information
+if(any(grepl("CDS", rownames(cds_counts)))){
+  #Need to extract gene_ID from label
+  rdesc = data.frame(original_rid = rownames(cds_counts))
+  rdesc = tidyr::separate(rdesc, col = original_rid, into = c("CDS", "gene_id"), remove = F, sep = ":")
+  rdesc = dplyr::select(rdesc, original_rid, gene_id)
+  length(unique(rdesc$gene_id))
+}else{
+  #Assume row names are proper gene IDs
+  rdesc = data.frame(gene_id = rownames(cds_counts))
+}
+
+if(any(rdesc$gene_id %in% gene_meta$orf_id)){
+  colnames(rdesc)[colnames(rdesc) == "gene_id"] = "orf_id"
+  rdesc =left_join(rdesc, (select(gene_meta, orf_id, gene_id) %>% distinct()), by = "orf_id") %>% distinct()
+  
+  #remove the indices of the ones that didn't map (removes NA and pseudo genes)
+  ridx_keep = which(grepl("PA14_", rdesc$gene_id))
+  cds_counts = cds_counts[ridx_keep,]
+  rownames(cds_counts) = rdesc$gene_id[ridx_keep]
+  
+}else{
+  rownames(cds_counts) = rdesc$gene_id
+}
+
+
+#Add gene metadata
+if(any(rdesc$gene_id %in% gene_meta$orf_id)){
+  rdesc = rdesc[ridx_keep,]
+  rdesc = dplyr::left_join(select(rdesc, -orf_id), gene_meta, by = "gene_id")
+}else{
+  rdesc = dplyr::left_join(rdesc, gene_meta, by = "gene_id")
+}
+# dim(cds_counts)
+
+
+#Save corrected gene labels
+saveRDS(cds_counts, cds_count_path)
+
+```
+
+
+### Working with data subset, reload cds counts with correct gene labels
+```{r}
+cds_counts = readRDS(cds_count_path)
+```
+
+
+### Add sample metadata
+```{r}
+#Changing to lower case for easier matching
+sample_meta$project_id = tolower(sample_meta$project_id)
+sample_meta$sample_id = tolower(sample_meta$sample_id)
+colnames(cds_counts) = tolower(colnames(cds_counts))
+cdesc = data.frame(original_cid = colnames(cds_counts), project_id = tolower(project_id0))
+
+if(!all(cdesc$original_cid %in% sample_meta$sample_id)){
+  print("Error: column names do not match sample names in metadata")
+}
+
+#Add sample metadata
+cdesc = left_join(cdesc, sample_meta, by = c("original_cid" = "sample_id", "project_id"))
+```
+
+## 3) QC raw counts
+
+### Check if there are low read samples that need to be removed
+```{r}
+#Check read count distributions. 
+#See if any samples should be removed due to low reads
+#See if genes should be removed due to mostly being zero. Low read genes are those that have a count of zero in at least half of the samples
+cds_counts_mat = as.matrix(cds_counts)
+sample_total = colSums(cds_counts_mat)
+head(sort(sample_total))
+hist(sample_total, breaks = 100)
+
+#Check if > 80% of the genes had a count of zero
+numzeros = apply(cds_counts_mat, MARGIN = 2, FUN = function(x){sum(x == 0)})
+num_genes = dim(cds_counts_mat)[1]
+zeros_fraction = numzeros/num_genes
+head(sort(zeros_fraction, decreasing = T))
+
+idx_remove = which(zeros_fraction > 0.8)
+print("Samples to remove: ")
+print(names(idx_remove))
+remove_samples_filepath = paste0(outdir, paste(run_name, 'samples_to_remove.txt', sep = "_"))
+write.table(names(idx_remove), remove_samples_filepath, quote = F, row.names = F, col.names = F)
+
+```
+
+### Check if there are lowly represented genes that need to be removed
+```{r}
+numzeros2 = apply(cds_counts_mat, MARGIN = 1, FUN = function(x){sum(x == 0)})
+num_samples = dim(cds_counts_mat)[2]
+zeros_fraction2 = numzeros2/num_samples
+head(sort(zeros_fraction2, decreasing = T))
+
+hist(zeros_fraction2, breaks = 100)
+idx_remove_genes = which(zeros_fraction2 >= 0.5)
+print("Genes to remove: ")
+print(names(idx_remove_genes))
+
+remove_genes_filepath = paste0(outdir, paste(run_name, 'genes_to_remove.txt', sep = "_"))
+write.table(names(idx_remove_genes), remove_genes_filepath, quote = F, row.names = F, col.names = F)
+
+#add gene annotations
+remove_genes_df = data.frame(gene_id = names(idx_remove_genes))
+remove_genes_df = left_join(remove_genes_df, gene_meta, by = "gene_id")
+remove_genes_df = mutate(remove_genes_df, gene_label = paste(gene_id, gene_name, sep = ":"))
+print("Genes to remove: ")
+print(remove_genes_df$gene_label)
+```
+
+### Trim count matrix
+```{r}
+#remove low count samples prior to this and the save the deseq object
+trim_counts_path = paste0(outdir, paste(run_name, 'counts_cds_trimmed.rds', sep = '_'))
+cds_counts_trim = trim_matrix(cds_counts_mat, remove_samples = remove_samples_filepath, remove_genes = remove_genes_filepath, savefilepath = trim_counts_path)
+cds_counts_trim = readRDS(trim_counts_path)
+dim(cds_counts_trim)
+
+#trim cdesc
+all(cdesc$original_cid %in% colnames(cds_counts_trim))
+sum((cdesc$original_cid %in% colnames(cds_counts_trim)))
+cdesc_trim = cdesc[which(cdesc$original_cid %in% colnames(cds_counts_trim)),]
+```
+
+
+## Run VST
+```{r}
+deseq_counts = DESeq2::DESeqDataSetFromMatrix(cds_counts_trim, colData = cdesc_trim, design = ~0 + condition_id)
+deseq_object_path = paste0(outdir, paste(run_name, 'prepped_for_deseq.rds', sep = "_"))
+saveRDS(deseq_counts, deseq_object_path)
+
+```
+
+
+### Perform VST transformation
+```{r}
+#Use a design matrix for dispersion estimates
+vst_filepath = paste0(outdir, paste(run_name, 'vst_remove_samples_and_genes.rds', sep = "_"))
+if(file.exists(vst_filepath)){
+  print("VST already run and saved previously")
+}else{
+  cds_vst <- DESeq2::vst(object = deseq_counts, blind = FALSE)
+  print("Performed vst")
+  saveRDS(cds_vst, vst_filepath)
+}
+data_vst = readRDS(vst_filepath)
+data_vst_mat = assay(data_vst)
+
+num_samples = dim(data_vst_mat)[2]
+num_genes = dim(data_vst_mat)[1]
+
+```
+
+## Make GCT files from vst data to include metadata
+```{r}
+#check if all column and row ids align
+cdesc1 = cdesc[which(cdesc$original_cid %in% colnames(data_vst_mat)),]
+match_idx1 = match(cdesc1$original_cid, colnames(data_vst_mat))
+cdesc1 = cdesc1[match_idx1,]
+all(cdesc1$original_cid == colnames(data_vst_mat))
+
+rdesc1 = rdesc[which(rdesc$gene_id %in% rownames(data_vst_mat)),]
+match_ridx1 = match(rdesc1$gene_id, rownames(data_vst_mat))
+rdesc1 = rdesc1[match_ridx1,]
+all(rdesc1$gene_id == rownames(data_vst_mat))
+
+vst_gct_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes", sep = "_"))
+
+#For downstream processing & viewing in morpheus
+rdesc2 = dplyr::select(rdesc1, -original_rid)
+save_to_gct(data_mat = data_vst_mat, data_cdesc = cdesc1, data_rdesc = rdesc2, savefilepath = vst_gct_filepath)
+# save_to_gctx(data_mat = data_vst_mat, data_cdesc = cdesc1, data_rdesc = rdesc2, savefilepath = vst_gct_filepath)
+
+```
+
+## Visualize PCA before and after VST
+```{r}
+
+data_vst = parse_gctx(paste0(vst_gct_filepath, "_n", num_samples, 'x', num_genes, '.gct'))
+data_vst_mat = data_vst@mat
+cdesc1 = data_vst@cdesc #gets the id column
+
+#PCA of before and after VST
+scaled_pca_vst = run_pca(data = data_vst_mat, col_meta = cdesc1, color_col = "pert_id", scale0 = T)
+
+```

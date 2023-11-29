@@ -1,0 +1,299 @@
+---
+title: "Calculate moderated z-score across all treatments, by batch"
+output: html_notebook
+---
+
+
+jbagnall@broadinstitute.org, adapted from scripts by Marek Orzechowski</br>
+Nov. 27, 2023</br>
+Calculate moderated z-score based on RNAseq data. This notebook is to be run after 01_qc_and_vst.Rmd. This notebook performs the points below: <br />
+<ol>
+  <li>Quantile normalize</li>
+  <li>Robust z-score</li>
+  <li>Moderated z-score, collapsing replicates based on correlation between replicates</li></ol>
+
+```{r, setup, include=FALSE}
+wkdir = '/broad/hptmp/jbagnall/'
+
+# Make sure directories exist, otherwise create them
+end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
+if(end_char != "/"){
+  wkdir = paste0(wkdir, '/')
+}
+
+if(dir.exists(wkdir)){
+  setwd(wkdir)
+  knitr::opts_knit$set(root.dir = wkdir) #This needs to be in the setup chunk to make it global for all chunks
+}else{
+  stop("Working directory does not exist")
+}
+print(paste0("Working directory: ", getwd()))
+```
+
+
+
+## Load libraries & data paths
+```{r, include=FALSE}
+library(cmapR)
+library(dplyr)
+source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_general.R')
+source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_mod_z_score.R')
+
+outdir = '/broad/hptmp/jbagnall/'
+run_name = "mocp0110"
+run_name_suffix = "2kd"
+project_id0 = "MOCP_0110"
+date0 = "231128"
+
+end_char = substr(outdir, nchar(outdir), nchar(outdir))
+if(end_char != "/"){
+  outdir = paste0(outdir, '/')
+}
+
+if(!dir.exists(outdir)){
+  print("Creating output directory")
+  dir.create(outdir)
+}
+
+getwd()
+
+#VST data calculated in 01_qc_and_vst.Rmd script
+vst_filepath = paste0(wkdir, paste(run_name, run_name_suffix, "vst_remove_low_count_samples_and_genes_n191x5894.gct", sep = "_"))
+
+data_vst = parse_gctx(vst_filepath)
+data_mat = data_vst@mat
+row_meta = data_vst@rdesc
+col_meta = data_vst@cdesc
+
+#Compound metadata
+comp_meta = read.csv('/idi/cgtb/jbagnall/psa_RNAseq/annotation/Metadata_compound_JB_230626.csv', stringsAsFactors = F)
+
+```
+
+
+## Quantile normalization
+### Group data by normalization units (comb_id)
+```{r}
+#Define groups (batches) to do quantile normalization
+col_meta = mutate(col_meta, comb_id = strain_id)
+
+comb_id_unique = unique(col_meta$comb_id)
+print(comb_id_unique)
+
+#update metadata in gctx file
+data_vst@cdesc = col_meta
+```
+
+### Quantile normalization within each normalization unit (normalization across each sample)
+```{r}
+#Loop over each comb_id
+data_qnorm = data_mat
+flag0 = rep(0, length(comb_id_unique)) #flag to check if all comb_ids ran
+for(num in 1:length(comb_id_unique)){
+    idx = which(col_meta$comb_id == comb_id_unique[num])
+    sum(length(idx))
+    if(sum(length(idx))>0){
+      data_qnorm[,idx] = qnorm_median(data_mat[,idx])
+    }else{
+      flag0[num] = 1
+    }
+}
+
+#If any comb_ids had no samples, sum(flag0) > 0
+if(sum(flag0) > 0){
+  print("Warning: Not all comb_ids were quantile normalized")
+}else{
+  print("All comb_ids quantile normalized")
+}
+
+any(is.na(data_qnorm))
+```
+
+#### Plotting qnorm data for QC visualization
+```{r}
+#Make boxplot of each sample
+col_meta_select = dplyr::select(col_meta, id, comb_id) %>% distinct()
+data_qnorm_df = as.data.frame(data_qnorm)
+data_qnorm_df$gene_id = rownames(data_qnorm_df)
+data_qnorm_df = tidyr::gather(data_qnorm_df, key = "id", value = "qnorm_vst", -gene_id)
+data_qnorm_df = dplyr::left_join(data_qnorm_df, col_meta_select, by = "id")
+
+ggplot(data_qnorm_df, aes(x = id, y = qnorm_vst, group = id)) +
+  geom_boxplot()+
+  facet_wrap(~comb_id, scales = "free_x")+
+  theme_bw(base_size = 14)
+
+data_qnorm_pca = run_pca(data_qnorm, col_meta = col_meta, color_col = "strain_id", scale0 = T)
+
+```
+
+```{r}
+#Save qnorm data to gct
+qnorm_file_path = paste0(outdir, paste(run_name,run_name_suffix, "qnorm_remove_low_count_samples_and_genes", sep = "_"))
+
+save_to_gct(data_mat = data_qnorm, data_cdesc = col_meta, data_rdesc = row_meta, savefilepath = qnorm_file_path)
+
+```
+
+
+
+## Z-score across each gene
+### Prepare with QC
+```{r}
+#Each row is a gene, visualize metrics that will be used for z-score calculation
+row_medians = rowMedians(data_qnorm, na.rm = T)
+plot(x = seq(1:length(row_medians)), y = row_medians)
+
+row_mads = apply(data_qnorm, MARGIN = 1, FUN = function(x){mad(x, na.rm = T)})
+plot(x = seq(1:length(row_mads)), y = row_mads)
+
+```
+
+### Perform Z-score calculation per row
+```{r}
+zscore_list = list()
+data_zscore = data_qnorm
+
+flag0 = rep(0, length(comb_id_unique)) #flag to check if all comb_ids ran
+for(num in 1:length(comb_id_unique)){
+    idx = which(col_meta$comb_id == comb_id_unique[num])
+    sum(length(idx))
+    if(sum(length(idx))>0){
+       zscore_list[[num]] = robust_zscore(data_qnorm[,idx], dim0 = 1) #z-score along rows, outputs zscores, medians and mads
+       data_zscore[,idx] = zscore_list[[num]][[1]] #only taking the z-scores
+    }else{
+      flag0[num] = 1
+    }
+}
+
+#Any comb_ids didn't get z-scored?
+if(sum(flag0) > 0){
+  print("Warning: Not all comb_ids were standardized")
+}
+```
+
+### Clip extreme z-score values
+```{r}
+#Clip z-score values to account for extreme cases where genes with low count had low variation (i.e. low median absolute deviation)
+#Look at genes' z-score distribution
+#hist(data_zscore, breaks = 100)
+#quantile(data_zscore, c(0.001, 0.005, 0.01, 0.05, 0.95, 0.99, 0.995, 0.999))
+
+data_zscore = base::pmax(data_zscore, -10)
+data_zscore = base::pmin(data_zscore, 10)
+
+```
+
+
+### Plot PCA
+```{r}
+data_zscore_pca = run_pca(data_zscore, col_meta = col_meta, color_col = "strain_id", scale0 = T)
+```
+
+### Save z-scores into GCT file
+```{r}
+if(!all(colnames(data_zscore) == col_meta$id)){
+  print("Warning: column names of matrix & metadata IDs do not match")
+}
+if(!all(rownames(data_zscore) == row_meta$gene_id)){
+  print("Warning: row names do not match gene IDs in metadata")
+}
+
+save_to_gct(data_mat = data_zscore, data_cdesc = col_meta, data_rdesc = row_meta, savefilepath = paste0(outdir, paste(run_name,run_name_suffix, "zscore_remove_low_count_samples_and_genes", sep = "_")))
+
+num_row_zscore = dim(data_zscore)[1]
+num_col_zscore = dim(data_zscore)[2]
+
+```
+
+## Collapse replicates
+```{r}
+zscore = cmapR::parse_gctx(paste0(outdir, paste(run_name,run_name_suffix, "zscore_remove_low_count_samples_and_genes", sep = "_"), "_n", num_col_zscore, "x", num_row_zscore, ".gct"))
+
+col_meta = zscore@cdesc
+data_zscore = zscore@mat
+
+#identify replicates
+#perform moderated collapsing of averages
+condition_id_unique = unique(col_meta$condition_id)
+num_genes = dim(data_zscore)[1]
+num_samples = dim(data_zscore)[2]
+num_conditions = length(condition_id_unique)
+
+data_rep_collapse = matrix(NA, nrow = num_genes, ncol = num_conditions)
+
+all(col_meta$id == colnames(data_zscore))
+
+for(num in 1:num_conditions){
+  idx = which(col_meta$condition_id == condition_id_unique[num])
+  cidx = which(colnames(data_zscore) %in% col_meta$id[idx])
+  data_rep_collapse[,num] = modzs_collapse_avg(data = data_zscore[,cidx], ridx = seq(1, num_genes, by = 1))
+}
+
+colnames(data_rep_collapse) = condition_id_unique
+rownames(data_rep_collapse) = rownames(data_zscore)
+
+```
+
+
+
+### Save replicate collapsed data as gct file
+```{r}
+#Revamp column metadata since replicates are collapsed
+col_meta_collapse = select(col_meta, condition_id, pert_id, pert_dose, pert_idose, pert_dose_unit, pert_iname, pert_itime, pert_time, pert_time_unit, pert_target, pert_mechanism, pert_submechanism, pert_type, pharmaceutical_class, project_id, strain_id, x_dose_mic_high_inoculum, vehicle, comb_id) %>% distinct()
+
+col_meta_collapse_sub = data.frame(condition_id = condition_id_unique)
+col_meta_collapse_sub = left_join(col_meta_collapse_sub, col_meta_collapse, by = "condition_id")
+all(colnames(data_rep_collapse) == col_meta_collapse_sub$condition_id)
+all(rownames(data_rep_collapse) == row_meta$gene_id)
+
+save_to_gct(data_mat = data_rep_collapse, data_cdesc = col_meta_collapse_sub, data_rdesc = row_meta, savefilepath = paste0(outdir, paste(run_name,run_name_suffix, "modzscore_remove_low_count_samples_and_genes_rep_collapse", sep = "_")))
+
+num_row_collapse = dim(data_rep_collapse)[1]
+num_col_collapse = dim(data_rep_collapse)[2]
+```
+
+### Plots and QC
+```{r}
+col_meta_collapse_sub$id = col_meta_collapse_sub$condition_id
+data_zscore_rep_collapse_pca = run_pca(data_rep_collapse, col_meta = col_meta_collapse_sub, color_col = "pert_dose", scale0 = T)
+```
+
+
+### Add inactive info and dose ranks to the column metadata if desired (optional)
+```{r}
+data_rep_collapse_path = paste0(outdir, paste(run_name,run_name_suffix, "modzscore_remove_low_count_samples_and_genes_rep_collapse", sep = "_"), "_n", num_col_collapse, "x", num_row_collapse, ".gct")
+data_rep_collapse = parse_gctx(data_rep_collapse_path)
+data_rep_collapse_mat = data_rep_collapse@mat
+
+#Determine weak signal separately based on DESeq2 p-values
+inactives = readRDS('/idi/cgtb/jbagnall/psa_RNAseq/mocp0110_2kd/zscore_by_strain/mocp_0110_2kd_txn_inactive_230705.rds')
+
+#condition_ids changed to include 5 digits after the decimal in the pert_dose to be consistent with previous runs
+inactives$numerator_condition_id_old = inactives$numerator_condition_id
+inactives = mutate(inactives, numerator_condition_id=paste(numerator_project_id, numerator_pert_id, paste0(sprintf("%.5f", round(numerator_pert_dose, 5)), "uM"), numerator_strain_id, "90min:A", sep = ":"))
+ 
+cdesc1 = data_rep_collapse@cdesc
+colnames(cdesc1)
+colnames(inactives)
+any(tolower(cdesc1$condition_id) %in% tolower(inactives$numerator_condition_id))
+cdesc1 = mutate(cdesc1, inactive = ifelse(tolower(condition_id) %in% tolower(inactives$numerator_condition_id), TRUE, FALSE))
+cdesc1 = cdesc1 %>%
+  group_by(strain_id, pert_id, pert_time, pert_itime) %>%
+  arrange(pert_dose) %>%
+  mutate(dose_rank = 1:n()) %>% 
+  ungroup()
+
+any(cdesc1$id %in% colnames(data_rep_collapse@mat))
+
+#reorder cdesc
+cidx = match(colnames(data_rep_collapse@mat), cdesc1$id)
+cdesc1 = cdesc1[cidx, ]
+all(cdesc1$id == colnames(data_rep_collapse@mat))
+str(cdesc1)
+
+data_rep_collapse@cdesc = as.data.frame(cdesc1)
+
+write_gct(data_rep_collapse, paste0(outdir, paste(run_name, run_name_suffix, 'modzscore_remove_low_count_samples_and_genes_rep_collapse_inactivelabel', date0, sep = "_")))
+ 
+```
