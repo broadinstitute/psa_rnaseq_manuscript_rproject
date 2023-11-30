@@ -11,9 +11,11 @@ Prep RNAseq data before calculating the moderated z-score based on RNAseq data. 
   <li>Adjust metadata</li>
   <li>QC raw counts</li>
   <li>Run VST</li></ol>
-
+  
 ```{r, setup, include=FALSE}
-wkdir = '/broad/hptmp/jbagnall/GSE166602/'
+#Set working directory to project directory
+wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
+# wkdir = '/broad/hptmp/jbagnall/GSE166602/'
 
 # Make sure directories exist, otherwise create them
 end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
@@ -31,14 +33,13 @@ print(paste0("Working directory: ", getwd()))
 ```
 
 
-
 ## Load libraries & data paths
 ```{r, include=FALSE}
 library(cmapR)
 library(dplyr)
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_psa_rnaseq_processing.R')
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_general.R')
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_mod_z_score.R')
+source('./functions/Functions_psa_rnaseq_processing.R')
+source('./functions/Functions_general.R')
+source('./functions/Functions_mod_z_score.R')
 
 count_path = '/broad/hptmp/jbagnall/GSE166602/GSE166602_cds_count_table.rds'
 counts_include_cds_only = TRUE #If true, does not need to extract cds from gene labels
@@ -271,7 +272,12 @@ all(rdesc1$gene_id == rownames(data_vst_mat))
 vst_gct_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes", sep = "_"))
 
 #For downstream processing & viewing in morpheus
-rdesc2 = dplyr::select(rdesc1, -original_rid)
+if("original_rid" %in% colnames(rdesc1)){
+  rdesc2 = dplyr::select(rdesc1, -original_rid)
+}else{
+  rdesc2 = rdesc1
+}
+
 save_to_gct(data_mat = data_vst_mat, data_cdesc = cdesc1, data_rdesc = rdesc2, savefilepath = vst_gct_filepath)
 # save_to_gctx(data_mat = data_vst_mat, data_cdesc = cdesc1, data_rdesc = rdesc2, savefilepath = vst_gct_filepath)
 

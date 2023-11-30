@@ -1,3 +1,7 @@
+#General functions for creating directories, saving gct(x) files and combining them.
+#jbagnall@broadinstitute.org
+#Nov. 30, 2023
+
 library(cmapR)
 library(dplyr)
 
@@ -67,7 +71,7 @@ save_to_gct = function(data_mat, data_cdesc = NA, data_rdesc = NA, savefilepath 
 combine_gct = function(ref_data_path, query_data_path, save_file_path, save_format_gct = TRUE){
   #Merges 2 gct files, e.g. query data + reference data (in order to do target prediction)
   #Input path to reference data (gct), usually moderated zscores
-  #Input path to query data (gct), usually moderated zscores
+  #Input path to query data (gct), usually moderated zscores or nzscores
   #Input save file path and stem of name
   #If save_format_gct is TRUE, saves as gct, otherwise gctx
   #Outputs a gctx correlation matrix (all by all, symmetric) saved to save_file_path (gctx)

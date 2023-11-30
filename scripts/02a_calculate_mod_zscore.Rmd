@@ -13,7 +13,9 @@ Calculate moderated z-score based on RNAseq data. This notebook is to be run aft
   <li>Moderated z-score, collapsing replicates based on correlation between replicates</li></ol>
 
 ```{r, setup, include=FALSE}
-wkdir = '/broad/hptmp/jbagnall/'
+#Set working directory to project directory
+wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
+# wkdir = '/broad/hptmp/jbagnall/'
 
 # Make sure directories exist, otherwise create them
 end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
@@ -36,8 +38,8 @@ print(paste0("Working directory: ", getwd()))
 ```{r, include=FALSE}
 library(cmapR)
 library(dplyr)
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_general.R')
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_mod_z_score.R')
+source('./functions/Functions_general.R')
+source('./functions/Functions_mod_z_score.R')
 
 outdir = '/broad/hptmp/jbagnall/'
 run_name = "mocp0110"
@@ -58,7 +60,7 @@ if(!dir.exists(outdir)){
 getwd()
 
 #VST data calculated in 01_qc_and_vst.Rmd script
-vst_filepath = paste0(wkdir, paste(run_name, run_name_suffix, "vst_remove_low_count_samples_and_genes_n191x5894.gct", sep = "_"))
+vst_filepath = paste0(outdir, paste(run_name, run_name_suffix, "vst_remove_low_count_samples_and_genes_n191x5894.gct", sep = "_"))
 
 data_vst = parse_gctx(vst_filepath)
 data_mat = data_vst@mat
@@ -66,7 +68,7 @@ row_meta = data_vst@rdesc
 col_meta = data_vst@cdesc
 
 #Compound metadata
-comp_meta = read.csv('/idi/cgtb/jbagnall/psa_RNAseq/annotation/Metadata_compound_JB_230626.csv', stringsAsFactors = F)
+# comp_meta = read.csv('./reference_files/Metadata_compound_231129.csv', stringsAsFactors = F)
 
 ```
 

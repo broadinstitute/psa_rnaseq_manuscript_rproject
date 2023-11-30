@@ -1,337 +1,11 @@
+#Functions for target/MoA prediction from RNAseq data
+#jbagnall@broadinstitute.org
+#Nov. 30, 2023
+
 library(dplyr)
 library(tidyr)
 library(cmapR)
 library(ggplot2)
-library(grid)
-library(gridExtra)
-
-compoundCorrelationdf <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strain_id1, cormatrix_path, cormatrix_path2 = NA, comptable_path, comptable_path2 = NA, tanimoto_path = NA, repCorThreshold = 0.4){
-  #Input compound and concentration
-  #Input either the compoundtable path or the data frame
-  #Input correlation matrix path gctx (has query compounds on columns and kabx2 columns on rows)
-  #returns correlation between query comp_conc and other comp_conc in the screen (comptable)
-  #comp1 = pert_id, conc1 = pert_idose
-  #output data frame  of compound correlations to the query comp_conc, listed in order from high to low
-  #For reference based predictions, correlation matrix: unknowns on columns & knowns on rows
-  #for refernce-free predictions, correlation matrix should be square: unknowns on columns & on rows
-  #comptablepath is the compound table for the unknown screen
-  #comptable_path2 is optional, and is the compound table for the kabx screen, if it is different from comptable_path are different.
-  #tanimoto only works if both the query and the kabx are in the same tanimoto matrices
-  #1/30/20 add cormatrix_path2 which should have the query compound correlated to its other concentrations in the same screen. It is optional, since this may be included in the first cormatrixpath
-  #Warning: If cormatrix_path2 is not present, it will try assign compoundcorrelation = 1 for the query. If query is already present in cormatrixpath1, it will assume it is the correct one (from the same screen)
-  #timepoint1 = time point (pert_itime), now comp_conc is comp_conc_time
-  #doesn't include the query compound's correlation to it's other doses if it's not in the columns
-  
-  query_compconc = paste(project_id1, comp1, conc1, pert_itime1, strain_id1, sep = ":") #comp1 = pert_id, conc1 = pert_idose
-  
-  cormatrix_rowmeta = read_gctx_meta(cormatrix_path, dim = "row")
-  cormatrix_colmeta = read_gctx_meta(cormatrix_path, dim = "col")
-  
-  # #Refine compound table based on thresholds
-  if(any(class(comptable_path) =="character")){
-    comptable = readRDS(comptable_path)
-  } else{
-    #else assume that it's a table or data frame
-    comptable = comptable_path
-  }
-  
-   #check if column comp_conc exists, added 5/11/22
-  comptable = mutate(comptable, comp_conc = paste(project_id, pert_id, pert_idose, pert_itime, strain_id, sep = ":"))
- 
-  #find query id--hopefully there's only 1
-  query_id = unique(filter(comptable, comp_conc == query_compconc)$id)
-  if(length(query_id) > 1){
-    # query_id = query_id[1]
-    print("There were multiple id's associated with this condition.")
-  }
-  
-  keepcomps = comptable
-
-
-  if(!(any(grepl(comp1, keepcomps$pert_id, fixed = T)))){
-    print(paste("Query compound not found", sep = ""))
-    # temp = filter(comptable, grepl(comp1, compound, fixed = T))
-    # temp <- temp %>%
-    #   slice(which.max(correlation))
-    # keepcomps = rbind(keepcomps, temp)
-    # print("Chose concentration with maximum replicate correlation")
-  }
-  
-  #Look at all the concentrations for the given compound
-  keepcomps_filtcomp = filter(keepcomps, grepl(comp1, pert_id, fixed = T))
-  keepcomps_filtcomp = mutate(keepcomps_filtcomp, comp_conc = paste(project_id, pert_id, pert_idose, pert_itime, strain_id, sep =':'))
-  # print(paste(keepcomps_filtcomp$pert_id, keepcomps_filtcomp$pert_idose, keepcomps_filtcomp$project_id, collapse = ", "))
-  print(paste(keepcomps_filtcomp$id, collapse = ", "))
-  
-  #filter by compound and concentration
-  if(!(conc1 %in% keepcomps_filtcomp$pert_idose)){
-    print(paste("Error: concentration", conc1, "not found"))
-    stop()
-  }
-  if(!(pert_itime1 %in% keepcomps_filtcomp$pert_itime)){
-    print(paste("Error: timepoint", pert_itime1, "not found"))
-    stop()
-  }
-  if(!(project_id1 %in% keepcomps_filtcomp$project_id)){
-    print(paste("Error: project_id", project_id1, "not found"))
-    stop()
-  }
-  
-  #find exact query (compound, concentration, timepoint, strain_id)
-  keepcomps_filt = filter(keepcomps, grepl(comp1, pert_id, fixed = T) & pert_idose == conc1 & pert_itime == pert_itime1 & project_id == project_id1 & strain_id == strain_id1)
-  
-  if(!is.na(comptable_path2)){
-    remove(keepcomps)
-    if(any(class(comptable_path2) =="character")){
-      comptable2 = readRDS(comptable_path2)
-    } else{
-      #else assume that it's a table or data frame
-      comptable2 = comptable_path2
-    }
-
-    
-    comptable2 <- mutate(comptable2, comp_conc = paste(project_id, pert_id, pert_idose, pert_itime, strain_id, sep = ":"))
-    comptable2 <- mutate(comptable2, pert_id = ifelse(grepl("BRD", pert_id), substr(pert_id, 1, 13), pert_id))
-    
-    comptable2$pert_dose = as.numeric(comptable2$pert_dose)
-    keepcomps = comptable2
-  }
-  
-  
-  colid = which(cormatrix_colmeta$id %in% keepcomps_filt$id)
-  rowid = which(cormatrix_rowmeta$id %in% keepcomps$id) #comes from second comptable_path2 if given
-  cor_matrix = parse_gctx(cormatrix_path, rid = rowid, cid = colid)
-  cor_matrix = cor_matrix@mat
-  
-  #return list of most compounds ranked by correlation
-  comp_conc1 = colnames(cor_matrix)[grepl(comp1, colnames(cor_matrix), fixed = T)] #only gives the comp_conc because should only have one column from keepcomps_filt
-  temp <- as.data.frame(cor_matrix[,comp_conc1])
-  colnames(temp)[1]= "CompoundCorrelation" 
-  temp$id =  rownames(temp)
-  # if(!(query_compconc %in% temp$comp_conc) & !is.na(cormatrix_path2)){ 
-  
-  #Remove the correlation of 1?
-  if(!is.na(cormatrix_path2)){
-    #Assumes if the query was not in the first cormatrix, it is in the second, if it is supplied
-    row_meta2 = read_gctx_meta(cormatrix_path2, dim = "row")
-    col_meta2 = read_gctx_meta(cormatrix_path2, dim = "col")
-    #Choose all concentrations of query compound along rows
-    cormat2 = parse_gctx(cormatrix_path2, rid = which(grepl(comp1, row_meta2$id, fixed = T)), cid = which(grepl(tolower(query_compconc), tolower(col_meta2$id))))
-    cormat2 = as.data.frame(cormat2@mat)
-    colnames(cormat2)[1] = "CompoundCorrelation"
-    cormat2$id = rownames(cormat2)
-    temp = rbind(cormat2, temp) %>% distinct()
-  }else if(!(any(grepl(paste(query_id, collapse = "|"),temp$id)))){ #if no second correlation matrix is supplied
-    query_df = data.frame(CompoundCorrelation = 1, comp_conc = query_compconc)
-    query_df = left_join(query_df, select(comptable, comp_conc, id), by= "comp_conc") #get the id
-    temp = rbind(select(query_df, CompoundCorrelation, id), temp)
-  }
-  
-  # else{
-  #   #artificially change query correlation to 1 (if it isn't 1, that means the same treatment was screend in two different screens)
-  #   temp$CompoundCorrelation[grepl(query_compconc, temp$id)] = 1
-  # }
-  
-  # temp <- separate(temp, id, into = c("project_id", "pert_id", "pert_idose", "strain_id", "project_id2", "plate_id"), sep = ":", remove = F)
-  # temp = mutate(temp, plate_id = paste(project_id2, plate_id, sep = ":")) %>% select(-project_id2)
-  # temp$concentration <- sub("\\.[[:alpha:]]", "", temp$concentration)
-  # temp$pert_dose <- as.numeric(temp$pert_dose)
-  # temp <- mutate(temp, pert_id = ifelse(grepl("BRD", pert_id), substr(pert_id, 1, 13), pert_id))
-  colnames(temp)[1]= "CompoundCorrelation" 
-  finaltable <- arrange(temp, desc(CompoundCorrelation))
-  finaltable <- mutate(finaltable, order= 1:n(), CompCorPercentile = 100*order/dim(finaltable)[1]) %>% select(-order)
-  
-  #Add tanimoto coefficient if available
-  if(!is.na(tanimoto_path)){
-    row_meta_tani <- read.gctx.meta(tanimoto_path, dimension = "row")
-    col_meta_tani <- read.gctx.meta(tanimoto_path, dimension = "col")
-    pert_id1 = ifelse(grepl("BRD", comp1), substr(comp1, 1, 13), comp1)
-    colid_tani = match(pert_id1, col_meta_tani$id) #may need to add fixed = T
-    rowid_tani = match(finaltable$pert_id, row_meta_tani$id) #may need to add fixed = T
-    # row_meta_tani <- mutate(row_meta_tani, rownum = 1:n())
-    if(!is.na(colid_tani)){
-      tani_vector <- parse.gctx(tanimoto_path, cid = colid_tani)
-      tani_vector <- tani_vector@mat
-      tani_vector_sub <- tani_vector[rowid_tani]
-      finaltable$tanimoto = tani_vector_sub
-    }else{
-      print("Tanimoto coefficient not found")
-    }
-    
-    # tani_vector_df <- data.frame(tani_vector)
-    # tani_vector_df$pert_id <- rownames(tani_vector_df)
-  }
-  
-  #Add compound table information (correlation, well count)
-  finaltable2 <- left_join(finaltable, keepcomps, by = "id") #requires full id to be the same. May want to relax to pert_id
-  finaltable2 = arrange(finaltable2, desc(CompoundCorrelation))
-  
-  return(finaltable2)
-}
-
-compCorFilter <- function(comp1, conc1, pert_itime1 = "0min", project_id1, strain_id1, compcortable, cormatrix_path, cormatrix_path2 = NA, metric = "median", compCorThreshold = 0.5, metricThreshold = 0.5, removequery = F, printPlots = F){
-  #3/23/23 updated to accomodate new doses with 5 digits after the decimal, and change of project_id to have underscore instead of hyphen
-  #Find Compound Community based on compound correlations
-  #From a list of correlations (compcortable) between compounds and a query compound (output of compoundCorrelationdf),
-  #filter out the ones of interest that are most similar to the rest of the group.
-  #The column name in compcortable should be "CompoundCorrelation"
-  #metric can be median, mean, min
-  #compCorThreshold is the threshold for the compound correlations to the query compound
-  #metricThreshold is the threshold for the metric, below which comp_conc are filtered out as not part of the group
-  #cormatrix_path is the path to the gctx file for the similarity matrix containing the query compound vs kabx
-  #cormatrix_path2 is optional to contain the similarity matrix for kabx against itself (if this is NA, then it assumes cormatrix_path includes all pairwise comparisons)
-  #removequery = F. if it is TRUE, then removes the query compound (and all of its concentrations) prior to forming the community
-  #assumes replicates are collapsed. Otherwise may need to delineate by project id.
-  #assumes condition_id is now part of column metadata of cormatrix_path
-  #id_col is the column name that the id should be matched to, usually condition_id or comb_id
-  
-  #Output: Returns data frame with median, average, min compound correlations between each compound and the rest of the group, 
-  #CompoundCorrelation column corresponds to correlation with original query compound
-  #1/10/20 edit. Second item in return list is the compound correlations within the entire community
-  #1/29/20 edit. add comp1, conc1, which are the query compound and concentration, need to obtain from other correlation matrix
-  #2/13/20 edit to accommodate cases where a known is correlated with a known from a different screen
-  
-  #query
-  # query_compconc = paste(project_id1, comp1, conc1, pert_itime1, strain_id1, sep = ":")
-  query_compconc = tolower(paste(project_id1, comp1, conc1, strain_id1, pert_itime1, sep = ":")) 
-  
-  cormatrix_rowmeta = read_gctx_meta(cormatrix_path, dim = "row")
-  cormatrix_colmeta = read_gctx_meta(cormatrix_path, dim = "col")
-
-  finaltable_filt = filter(compcortable, CompoundCorrelation > compCorThreshold)
-  finaltable_filt = mutate(finaltable_filt, comp_conc = paste(project_id, pert_id, pert_idose, pert_itime, strain_id, sep =":"))
-  
-  if(removequery){
-    querycomp_df = filter(finaltable_filt, CompoundCorrelation == 1)
-    if(nrow(querycomp_df) > 0){
-      finaltable_filt = filter(finaltable_filt, pert_id != querycomp_df$pert_id) #removes all concentrations of the query pert_id 
-      finaltable_filt = rbind(querycomp_df, finaltable_filt) #adds back only the query itself
-    } #assumes if the correlation is not 1, and it has the same compound and concentration, it was screened at a different time, not the same and should be compared
-    #     else{
-    #       finaltable_filt = filter(finaltable_filt, comp_conc != compconc1)
-    #     }
-  }
-  
-  #Assume a symmetric correlation matrix with unknown and kabx compounds
-  if(all(cormatrix_colmeta$id %in% cormatrix_rowmeta$id)){
-    #all columns are in the rows
-    cormatrix_filt = parse_gctx(cormatrix_path, rid = match(finaltable_filt$id, cormatrix_rowmeta$id), cid =  match(finaltable_filt$id, cormatrix_colmeta$id))
-    cormatrix_filt = cormatrix_filt@mat
-    
-    cormatrix_filt_upper = cormatrix_filt
-    cormatrix_filt_upper[lower.tri(cormatrix_filt_upper, diag = T)] = NA
-  }else{
-    #must reconstruct the matrix from two correlation matrices, one with the query, and the other with kabx
-    #retrieve query from first correlation matrix column
-    finaltable_filt_noquery = dplyr::filter(finaltable_filt, pert_id != comp1) 
-    
-    if(nrow(finaltable_filt_noquery) > 0){ #the query has a community outside of itself, same pert_id is allowed...
-      #allowed to correlate to same treatment condition if it passed the removequery stage
-      # query_col = parse_gctx(cormatrix_path, rid = match(finaltable_filt$id, cormatrix_rowmeta$id, nomatch = 0), cid = which(grepl(query_compconc, cormatrix_colmeta$id)))
-      query_col = parse_gctx(cormatrix_path, rid = match(finaltable_filt$id, cormatrix_rowmeta$id, nomatch = 0), cid = which(grepl(query_compconc, cormatrix_colmeta$condition_id))) #3/23/23
-      
-      query_col = query_col@mat
-      
-      kabx_rowmeta = read_gctx_meta(cormatrix_path2, dim = "row")
-      kabx_colmeta = read_gctx_meta(cormatrix_path2, dim = "col")
-      kabx_mat = parse_gctx(cormatrix_path2, rid = match(finaltable_filt$id, kabx_rowmeta$id, nomatch = 0), cid = match(finaltable_filt$id, kabx_colmeta$id, nomatch = 0))
-      kabx_mat = kabx_mat@mat
-      
-      # length(query_col) == dim(kabx_mat)[1]
-      # all(rownames(query_col) == rownames(kabx_mat))
-      cormatrix_filt = cbind(query_col, kabx_mat)
-      temp = t(rbind(1, query_col))
-      cormatrix_filt = rbind(temp, cormatrix_filt)
-      colnames(cormatrix_filt)[1] = query_compconc
-      rownames(cormatrix_filt)[1] = query_compconc
-      
-      cormatrix_filt_upper = cormatrix_filt
-      cormatrix_filt_upper[lower.tri(cormatrix_filt_upper, diag = T)] = NA
-      cormatrix_filt_upper[1,1]= 1
-    }else{
-      #Not suitable for cases where want to keep correlation for different doses of the same compound. 
-      #Would need to add another correlation matrix for the screen against itself.
-      
-      print("no neighbors")
-      cormatrix_filt_upper= 1
-      }
-  }
-  
-  #Replace the 1 for the query compound
-  colmedian = apply(cormatrix_filt_upper, 2, FUN = substitute(metric), na.rm = T)
-  test = apply(cormatrix_filt_upper, 2, FUN = median, na.rm = T)
-  idxend_all = which(colmedian <= metricThreshold)  #Choose up to the first compound that has median low compCor with rest of compounds in group
-  if(length(idxend_all) == 0){
-    #Even the last element fulfills the compound correlation requirement
-    # & !unname((colmedian[length(colmedian)] <= compCorThreshold))
-    idxend = length(colmedian)
-  }else if(any(is.na(unname(idxend_all)))){
-    #Only the first element (query compound) remains. Nothing else is similar enough
-    idxend = 1
-  }else{
-    idxend = idxend_all[1] - 1 #Decrease one index since you want one with colmedian > compCorThreshold
-  }
-  
-  cormatrix_filt2 = as.matrix(cormatrix_filt_upper[1:idxend,1:idxend])
-  rownames(cormatrix_filt2) = rownames(cormatrix_filt_upper)[1:idxend]
-  colnames(cormatrix_filt2) = colnames(cormatrix_filt_upper)[1:idxend]
-  
-  if(printPlots){
-    hist(cormatrix_filt_upper, breaks = 50,xlim = c(0,1), xlab = "Compound Correlation", ylab = "# Comp_Conc")
-    hist(cormatrix_filt2, xlim = c(0,1), breaks = 50, xlab = "Compound Correlation of Subset", ylab = "# Comp_Conc")
-    
-  }
-  
-  #return correlations of the community for later plotting purposes. 
-  if(idxend == 1){
-    #No compounds in the community
-    #return empty data frame
-    cormatrixfilt2_df = data.frame(comp_conc = character(), CommunityCorrelation = numeric())
-  }else{
-    cormatrixfilt2_df = as.data.frame(cormatrix_filt2[,2:idxend]) #exclude query
-    cormatrixfilt2_df = gather(cormatrixfilt2_df, key = "id", value = "CommunityCorrelation")
-    cormatrixfilt2_df = filter(cormatrixfilt2_df, !is.na(CommunityCorrelation))
-  }
-  
-  #This gives correlations to all compounds within the community
-  cormatrixfilt_df = as.data.frame(cormatrix_filt[1:idxend, 1:idxend])
-  rownames(cormatrixfilt_df) = rownames(cormatrix_filt)[1:idxend]
-  colnames(cormatrixfilt_df) = colnames(cormatrix_filt)[1:idxend]
-  cormatrixfilt_df = gather(cormatrixfilt_df, key = "id", value = "CompoundCorrelation")
-
-  
-  numcompconc = length(unique(cormatrixfilt_df$id))
-  cormatrixfilt_df = cormatrixfilt_df %>%
-    filter(CompoundCorrelation != 1) %>%
-    group_by(id) %>%
-    summarise(medianCompCor = median(CompoundCorrelation), avgCompCor = mean(CompoundCorrelation, na.rm = T), minCompCor = min(CompoundCorrelation, na.rm = T), maxCompCor = max(CompoundCorrelation, na.rm = T)) %>%
-    ungroup()
-
-
-  #This gives the correlation to the compounds up to that point (not to all compounds in community)
-  cormatrixfilt_df_sub = as.data.frame(cormatrix_filt_upper[1:idxend, 1:idxend])
-  rownames(cormatrixfilt_df_sub) = rownames(cormatrix_filt)[1:idxend]
-  colnames(cormatrixfilt_df_sub) = colnames(cormatrix_filt)[1:idxend]
-  cormatrixfilt_df_sub = gather(cormatrixfilt_df_sub, key = "id", value = "CompoundCorrelation")
-  numcompconc = length(unique(cormatrixfilt_df_sub$id))
-  cormatrixfilt_df_sub = cormatrixfilt_df_sub %>%
-    filter(!is.na(CompoundCorrelation)) %>%
-    group_by(id) %>%
-    summarise(medianCompCor_sub = median(CompoundCorrelation, na.rm = T), avgCompCor_sub = mean(CompoundCorrelation, na.rm = T), minCompCor_sub = min(CompoundCorrelation, na.rm = T), maxCompCor_sub = max(CompoundCorrelation, na.rm = T)) %>%
-    ungroup()
-  
-  # comb_df = left_join(cormatrixfilt_df, select(finaltable_filt, CompoundCorrelation, comp_conc), by  = "comp_conc")
-  comb_df = full_join(finaltable_filt, cormatrixfilt_df, by = "id") #changed from right join to full_join 2/28/20
-  comb_df = left_join(comb_df, cormatrixfilt_df_sub, by = "id")
-  
-  comb_df = arrange(comb_df, desc(CompoundCorrelation))
-  
-  return_list = list()
-  return_list[[1]] = comb_df
-  return_list[[2]] = cormatrixfilt2_df
-  return(return_list)
-  
-}
 
 targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, metadata, target_colname1 = "pert_mechanism", target_colname2 = "pert_target", savefilename = NA, removequery = F){
   #For reference-based MOA predictions
@@ -399,6 +73,7 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
     return(cormat_lf_treatments)
   }else{
     saveRDS(cormat_lf_treatments, savefilename)  
+    print(paste0("File saved to: ", savefilename))
   }
 
 }
@@ -413,11 +88,20 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
   #if avg_doses = T, then will use the mean of the correlations across doses (this is default). If F, then will use the max across all doses.
   #if save_all_target_cor = T, then will save RDS files of max correlations to all targets, useful for plotting purposes later
   
-  #outputs top ranked target predictions
-  #subsets known vs unknowns
-  #subsets high confidence vs everything else
+  #Outputs target predictions for each compound in a .csv file
+  #subsets known (in reference set) vs unknowns (not in reference set)
   #saves 2 csv files, one with all knowns, one with unknowns
-  #List all correlation values and our confidence score (what fraction with that correlation value that were called correctly in kabx2)
+  #List all correlation values and the confidence score (positive predictive value, what fraction with that correlation value (or higher) were called correctly in the reference set)
+  #Output column explanations in csv file:
+  #query_pert_id: query compound
+  #predicted_target: predicted target
+  #target_correlation: maximal correlation between query compound and the treatments in the predicted target category
+  #normalized_target_correlation: target_correlation divided by the maximal correlation between the query treatment and any target category
+  #positive_predictive_value: fraction of compounds whose targets would be predicted correctly in the reference set (Leave-one-compound-out-cross_validation), with the listed correlation value or higher
+  #neighbor_pert_id: the compound from the reference set with the highest correlation to the query
+  #predicted_pert_target: the target of the neighbor_pert_id
+  #predicted_pharmaceutical_class: the pharmaceutical class of the neighbor_pert_id
+  
   
   if(is.character(kabx_annopath)){
     kabx_annotation = read.csv(kabx_annopath, stringsAsFactors = F)
@@ -568,7 +252,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       group_by(query_pert_id, kabx_target, mean_compcor, mean_compcor_norm, precision) %>%
       summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
-    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
+    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "positive_predictive_value", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
     
     unknown_df_output_anno = arrange(unknown_df_output_anno, desc(target_correlation))
     
@@ -716,7 +400,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
     
-    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "fraction_correct_in_kabx2", "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
+    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "positive_predictive_value", "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
     
     known_df_output_anno = arrange(known_df_output_anno, desc(target_correlation))
     

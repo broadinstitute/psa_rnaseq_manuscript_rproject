@@ -13,7 +13,8 @@ Calculate moderated nz-score for RNAseq data. This notebook is to be run after 0
 
 # Set up working directory
 ```{r, setup, include=FALSE}
-wkdir = '/broad/hptmp/jbagnall/GSE166602/'
+wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
+# wkdir = '/broad/hptmp/jbagnall/GSE166602/'
 
 # Make sure directories exist, otherwise create them
 end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
@@ -36,8 +37,8 @@ print(paste0("Working directory: ", getwd()))
 ```{r, include=FALSE}
 library(cmapR)
 library(dplyr)
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_general.R')
-source('/home/unix/jbagnall/git/psa_rnaseq_manuscript/functions/Functions_mod_z_score.R')
+source('./functions/Functions_general.R')
+source('./functions/Functions_mod_z_score.R')
 
 outdir = '/broad/hptmp/jbagnall/GSE166602/'
 run_name = "GSE166602"
@@ -56,7 +57,7 @@ if(!dir.exists(outdir)){
 getwd()
 
 #VST data calculated in script_qc_and_vst_before_moderated_zscore.Rmd
-vst_filepath = paste0(wkdir, paste(run_name, "vst_remove_low_count_samples_and_genes_n24x5894.gct", sep = "_"))
+vst_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes_n24x5894.gct", sep = "_"))
 
 data_vst = parse_gctx(vst_filepath)
 data_mat = data_vst@mat
