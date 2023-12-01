@@ -2,7 +2,7 @@
 Scripts and data files used for PsA RNAseq manuscript
 
 ## R project file
-Open .Rproj file to easily access all scripts and data mentioned below.
+Open psa_rnaseq_manuscript.Rproj file to easily access all scripts and data mentioned below.
 
 ## Scripts
 * 01_qc_and_vst.Rmd: Script for QC reads and calcuating vst</li>
