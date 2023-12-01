@@ -2,13 +2,10 @@
 Scripts and data files used for PsA RNAseq manuscript
 
 ## Scripts
-Scripts include:
-<ol>
-  <li>01_qc_and_vst.Rmd: Script for QC reads and calcuating vst</li>
-  <li>02a_calculate_mod_zscore.Rmd: Calculate moderated z-scores (if you have variety of drug treatments)</li>
-  <li>02a_calculate_mod_nzscore.Rmd: Calculate moderated nz-scores (z-scores relative to negative control)</li>
-  <li>03_target_predictions.R: Predict targets of query compounds</li>
-</ol>
+* 01_qc_and_vst.Rmd: Script for QC reads and calcuating vst</li>
+* 02a_calculate_mod_zscore.Rmd: Calculate moderated z-scores (if you have variety of drug treatments)</li>
+* 02a_calculate_mod_nzscore.Rmd: Calculate moderated nz-scores (z-scores relative to negative control)</li>
+* 03_target_predictions.R: Predict targets of query compounds</li>
 
 ## Functions
 Functions are R functions utilized by the scripts above.
