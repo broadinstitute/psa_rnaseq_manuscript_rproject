@@ -272,15 +272,15 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
         theme(axis.text.x = element_text(hjust = 1, vjust = 0.5, angle = 90))
       print(p1)
       
-      if(tani_path != ''){
-        p2 = ggplot(unknown_df_output_anno, aes(x = target_correlation, y = max_tani))+
-          geom_point()+
-          labs(x = "Average correlation", y = "Max Tanimoto", title = "Unknowns")+
-          xlim(0,1)+
-          ylim(0,1)+
-          theme_bw(base_size = 16)
-        print(p2)
-      }
+      # if(tani_path != ''){
+      #   p2 = ggplot(unknown_df_output_anno, aes(x = target_correlation, y = max_tani))+
+      #     geom_point()+
+      #     labs(x = "Average correlation", y = "Max Tanimoto", title = "Unknowns")+
+      #     xlim(0,1)+
+      #     ylim(0,1)+
+      #     theme_bw(base_size = 16)
+      #   print(p2)
+      # }
     }
   }
   
@@ -380,17 +380,17 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
     known_df_output_anno = left_join(known_df_output_anno, kabx_anno_collapse, by = c("neighbor_pert_id" = "pert_id"))
     
     #Add tanimoto information if given
-    if(tani_path != ''){
-      row_meta = read.gctx.meta(tani_path, dimension = "row")
-      col_meta = read.gctx.meta(tani_path, dimension = "col")
-      
-      known_df_output_anno = known_df_output_anno %>%
-        group_by(query_pert_id, neighbor_pert_id) %>%
-        mutate(tanimoto = ifelse((query_pert_id %in% row_meta$id) & (neighbor_pert_id %in% col_meta$id), as.numeric(parse.gctx(tani_path, rid = which(row_meta$id == query_pert_id), cid = which(col_meta$id == neighbor_pert_id))@mat), NaN)) %>%
-        ungroup()
-    }else{
-      known_df_output_anno$tanimoto = NaN
-    }
+    # if(tani_path != ''){
+    #   row_meta = read.gctx.meta(tani_path, dimension = "row")
+    #   col_meta = read.gctx.meta(tani_path, dimension = "col")
+    #   
+    #   known_df_output_anno = known_df_output_anno %>%
+    #     group_by(query_pert_id, neighbor_pert_id) %>%
+    #     mutate(tanimoto = ifelse((query_pert_id %in% row_meta$id) & (neighbor_pert_id %in% col_meta$id), as.numeric(parse.gctx(tani_path, rid = which(row_meta$id == query_pert_id), cid = which(col_meta$id == neighbor_pert_id))@mat), NaN)) %>%
+    #     ungroup()
+    # }else{
+    #   known_df_output_anno$tanimoto = NaN
+    # }
     
     #collapse neighbors again
     known_df_output_anno = select(known_df_output_anno, -target_rank_norm, -target_rank_notnorm, -threshold_idx, -fdr)
