@@ -12,11 +12,42 @@ Calculate moderated z-score based on RNAseq data. This notebook is to be run aft
   <li>Robust z-score</li>
   <li>Moderated z-score, collapsing replicates based on correlation between replicates</li></ol>
 
-```{r, setup, include=FALSE}
-#Set working directory to project directory
+
+# User inputs
+```{r}
+#working directory
 wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
 # wkdir = '/broad/hptmp/jbagnall/'
 
+#output directory
+outdir = '/broad/hptmp/jbagnall/'
+
+#run_name is something to identify this data set, will be included in saved file names
+run_name = "mocp0110"
+
+#run_name_suffix is something to identify this data set (in case it's a subset of run_name), will be included in saved file names, can be empty string
+run_name_suffix = "2kd"
+
+#project_id0 could be the same as run_name, but is something corresponding to a field in the input data frame to identify this data set
+project_id0 = "MOCP_0110"
+
+#date
+date0 = "231128"
+
+#vst file path, VST data calculated in 01_qc_and_vst.Rmd script
+vst_filepath = paste0(outdir, paste(run_name, run_name_suffix, "vst_remove_low_count_samples_and_genes_n191x5894.gct", sep = "_"))
+
+#Column name in the column metadata from the VST file that identifies the batches within which you will calculate z-scores, e.g. something that identifies the 384 well plates, or different data sets
+batch_column_name = "strain_id"
+
+#Value at which to clip the absolute value of the resulting z-scores, so outliers don't throw off down-stream correlations to the reference set
+#This value is usually 10 for z-scores (larger # of samples), and larger, e.g. 500, for nz-scores (smaller # of samples)
+clip_value = 10
+                     
+```
+
+
+```{r, setup, include=FALSE}
 # Make sure directories exist, otherwise create them
 end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
 if(end_char != "/"){
@@ -41,12 +72,6 @@ library(dplyr)
 source('./functions/Functions_general.R')
 source('./functions/Functions_mod_z_score.R')
 
-outdir = '/broad/hptmp/jbagnall/'
-run_name = "mocp0110"
-run_name_suffix = "2kd"
-project_id0 = "MOCP_0110"
-date0 = "231128"
-
 end_char = substr(outdir, nchar(outdir), nchar(outdir))
 if(end_char != "/"){
   outdir = paste0(outdir, '/')
@@ -60,8 +85,6 @@ if(!dir.exists(outdir)){
 getwd()
 
 #VST data calculated in 01_qc_and_vst.Rmd script
-vst_filepath = paste0(outdir, paste(run_name, run_name_suffix, "vst_remove_low_count_samples_and_genes_n191x5894.gct", sep = "_"))
-
 data_vst = parse_gctx(vst_filepath)
 data_mat = data_vst@mat
 row_meta = data_vst@rdesc
@@ -77,7 +100,9 @@ col_meta = data_vst@cdesc
 ### Group data by normalization units (comb_id)
 ```{r}
 #Define groups (batches) to do quantile normalization
-col_meta = mutate(col_meta, comb_id = strain_id)
+temp = col_meta[[batch_column_name]]
+col_meta[["comb_id"]] = temp
+remove(temp)
 
 comb_id_unique = unique(col_meta$comb_id)
 print(comb_id_unique)
@@ -125,7 +150,7 @@ ggplot(data_qnorm_df, aes(x = id, y = qnorm_vst, group = id)) +
   facet_wrap(~comb_id, scales = "free_x")+
   theme_bw(base_size = 14)
 
-data_qnorm_pca = run_pca(data_qnorm, col_meta = col_meta, color_col = "strain_id", scale0 = T)
+data_qnorm_pca = run_pca(data_qnorm, col_meta = col_meta, color_col = batch_column_name, scale0 = T)
 
 ```
 
@@ -179,10 +204,10 @@ if(sum(flag0) > 0){
 #Clip z-score values to account for extreme cases where genes with low count had low variation (i.e. low median absolute deviation)
 #Look at genes' z-score distribution
 #hist(data_zscore, breaks = 100)
-#quantile(data_zscore, c(0.001, 0.005, 0.01, 0.05, 0.95, 0.99, 0.995, 0.999))
+quantile(data_zscore, c(0.001, 0.005, 0.01, 0.05, 0.95, 0.99, 0.995, 0.999))
 
-data_zscore = base::pmax(data_zscore, -10)
-data_zscore = base::pmin(data_zscore, 10)
+data_zscore = base::pmax(data_zscore, -1*clip_value)
+data_zscore = base::pmin(data_zscore, clip_value)
 
 ```
 

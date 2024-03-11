@@ -11,12 +11,39 @@ Calculate moderated nz-score for RNAseq data. This notebook is to be run after 0
   <li>Robust nz-score</li>
   <li>Moderated z-score, collapsing replicates based on correlation between replicates</li></ol>
 
-# Set up working directory
-```{r, setup, include=FALSE}
+# User inputs
+```{r}
+#working directory
 wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
 # wkdir = '/broad/hptmp/jbagnall/GSE166602/'
 
-# Make sure directories exist, otherwise create them
+#output directory
+outdir = '/broad/hptmp/jbagnall/GSE166602/'
+
+#run_name is something to identify this data set, will be included in saved file names
+run_name = "GSE166602"
+
+#project_id0 could be the same as run_name, but is something corresponding to a field in the input data frame to identify this data set
+project_id0 = "PRJNA701395"
+
+#vst file path, VST data calculated in 01_qc_and_vst.Rmd script
+vst_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes_n24x5894.gct", sep = "_"))
+
+#Column name in the column metadata from the VST file that identifies the batches within which you will calculate z-scores, e.g. something that identifies the 384 well plates, or different data sets
+batch_column_name = "project_id"
+
+#Compound name (i.e. pert_id, perturbation ID) of negative control, to which the normalization will occur
+negcon_name = "dmso"
+
+#Value at which to clip the absolute value of the resulting z-scores, so outliers don't throw off down-stream correlations to the reference set
+clip_value = 500
+                     
+```
+
+
+# Set up working directory
+```{r, setup, include=FALSE}
+# Make sure working directory exists, otherwise create it
 end_char = substr(wkdir, nchar(wkdir), nchar(wkdir))
 if(end_char != "/"){
   wkdir = paste0(wkdir, '/')
@@ -33,17 +60,15 @@ print(paste0("Working directory: ", getwd()))
 
 
 
-# Load libraries & data paths
+# Load libraries & data
 ```{r, include=FALSE}
 library(cmapR)
 library(dplyr)
+library(ggplot2)
 source('./functions/Functions_general.R')
 source('./functions/Functions_mod_z_score.R')
 
-outdir = '/broad/hptmp/jbagnall/GSE166602/'
-run_name = "GSE166602"
-project_id0 = "PRJNA701395"
-
+#make sure output directory exists
 end_char = substr(outdir, nchar(outdir), nchar(outdir))
 if(end_char != "/"){
   outdir = paste0(outdir, '/')
@@ -56,9 +81,7 @@ if(!dir.exists(outdir)){
 
 getwd()
 
-#VST data calculated in script_qc_and_vst_before_moderated_zscore.Rmd
-vst_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes_n24x5894.gct", sep = "_"))
-
+#Load VST data calculated in script_qc_and_vst_before_moderated_zscore.Rmd
 data_vst = parse_gctx(vst_filepath)
 data_mat = data_vst@mat
 row_meta = data_vst@rdesc
@@ -69,11 +92,16 @@ col_meta = data_vst@cdesc
 
 ## Group data by normalization units (comb_id)
 ```{r}
-#Assign batch to column "comb_id"
-length(unique(col_meta$project_id))
-unique(col_meta$project_id)
+#Add a column "comb_id" that identifies the batch within which to normalize/calculate z-scores
+temp = col_meta[[batch_column_name]]
+col_meta[["comb_id"]] = temp
+remove(temp)
 
-col_meta = mutate(col_meta, comb_id = project_id)
+#Assign batch to column "comb_id"
+# length(unique(col_meta$comb_id))
+# unique(col_meta$comb_id)
+
+# col_meta = mutate(col_meta, comb_id = batch_column)
 comb_id_unique = unique(col_meta$comb_id)
 print(comb_id_unique)
 
@@ -96,7 +124,7 @@ plot(x = seq(1:length(row_mads)), y = row_mads)
 ### Perform Z-score calculation per row
 ```{r}
 #Subset to negative controls for input into the z-score function to get median and mad per row (gene)
-col_meta_negcon = dplyr::filter(col_meta, pert_id == "dmso")
+col_meta_negcon = dplyr::filter(col_meta, pert_id == negcon_name)
 unique(col_meta_negcon$pert_id)
 View(table(col_meta_negcon$comb_id))
 cidx = which(col_meta$id %in% col_meta_negcon$id)
@@ -199,17 +227,17 @@ for(n in sample_gene_idx){
 max(data_zscore)
 min(data_zscore)
 iqr(data_zscore)
-# quantile(data_zscore, c(0.005,0.01, .1, 0.2, 0.25, 0.5, 0.75, 0.8, 0.9, 0.99, 0.995))
+# quantile(data_zscore, c(0.005,0.01, .1, 0.2, 0.25, 0.5, 0.75, 0.8, 0.9, 0.99, 0.995)) #done later
 median(data_zscore)
 
 
-#how many zscores above 500
+#how many zscores above clip_value (500)
 data_zscore_df = as.data.frame(data_zscore)
 data_zscore_df$gene_id = rownames(data_zscore_df)
 data_zscore_df = tidyr::gather(data_zscore_df, key = "original_cid", value = "zscore", -gene_id)
 data_zscore_df = left_join(data_zscore_df, col_meta, by = c("original_cid"))
 
-high_zscore = filter(data_zscore_df, zscore > 500)
+high_zscore = filter(data_zscore_df, zscore > clip_value)
 high_zscore_maxz = high_zscore %>%
   group_by(gene_id) %>%
   dplyr::slice(which.max(abs(zscore))) %>%
@@ -217,20 +245,20 @@ high_zscore_maxz = high_zscore %>%
   arrange(desc(abs(zscore)))
 length(unique(high_zscore$gene_id))
 View(table(high_zscore$strain_id))
-
-pdf(paste0(outdir, 'high_zscore_gene_histograms.pdf'), width = 8, height = 4)
-sample_gene_ids = high_zscore_maxz$gene_id
-for(n in sample_gene_ids){
-  data_sub = dplyr::filter(data_zscore_df, gene_id == n)
-  anno1 = dplyr::filter(row_meta, gene_id == n)
-  p0 = ggplot(data_sub, aes(x = zscore))+
-    geom_histogram(binwidth = 5)+
-    labs(title = paste(anno1$gene_id, anno1$gene_name, anno1$`gene_description_(refseq)`, sep = ":"), xlab = "Z-score to neg. control", ylab = "# Samples")+
-    theme_bw(base_size = 14)
-
-  print(p0)  
-}
-dev.off()
+# 
+# pdf(paste0(outdir, 'high_zscore_gene_histograms.pdf'), width = 8, height = 4)
+# sample_gene_ids = high_zscore_maxz$gene_id
+# for(n in sample_gene_ids){
+#   data_sub = dplyr::filter(data_zscore_df, gene_id == n)
+#   anno1 = dplyr::filter(row_meta, gene_id == n)
+#   p0 = ggplot(data_sub, aes(x = zscore))+
+#     geom_histogram(binwidth = 5)+
+#     labs(title = paste(anno1$gene_id, anno1$gene_name, anno1$`gene_description_(refseq)`, sep = ":"), xlab = "Z-score to neg. control", ylab = "# Samples")+
+#     theme_bw(base_size = 14)
+# 
+#   print(p0)  
+# }
+# dev.off()
 
 #hist of all zscores
 hist(data_zscore, breaks = 100)
@@ -271,13 +299,16 @@ data_zscore = zscore@mat
 
 quantile(data_zscore, c(0.001, 0.005, 0.01, 0.05, 0.95, 0.99, 0.995, 0.999))
 
-#how many scores above 500?
-clip_value = 500
-sum(data_zscore > clip_value)
-sum(data_zscore < (-1*clip_value))
-length(data_zscore)
+#how many scores above 500? should be less than 1%
+# clip_value = 500 #defined by user input in first chunk
+# % of treatments affected by clipping
+num_above = sum(data_zscore > clip_value)
+num_below = sum(data_zscore < (-1*clip_value))
+num_total = length(data_zscore)
+percent_clipped = 100*(num_above + num_below)/num_total
+print(paste0("percent clipped: ", signif(percent_clipped, digits = 4), "%"))
 
-#See if clipping changes the correlations substantially
+#Clip z-scores
 data_zscore = base::pmax(data_zscore, (-1*clip_value))
 data_zscore = base::pmin(data_zscore, clip_value)
 
@@ -325,7 +356,7 @@ rownames(data_rep_collapse) = rownames(data_zscore)
 ### Save replicate collapsed data as gct file
 ```{r}
 #Revamp column metadata since replicates are collapsed
-col_meta_collapse = select(col_meta, condition_id, pert_id, pert_dose, pert_idose, pert_dose_unit, project_id, strain_id, comb_id) %>% distinct()
+col_meta_collapse = dplyr::select(col_meta, condition_id, pert_id, pert_dose, pert_idose, pert_dose_unit, project_id, strain_id, comb_id) %>% distinct()
 
 col_meta_collapse_sub = data.frame(condition_id = condition_id_unique)
 col_meta_collapse_sub = left_join(col_meta_collapse_sub, col_meta_collapse, by = "condition_id")
