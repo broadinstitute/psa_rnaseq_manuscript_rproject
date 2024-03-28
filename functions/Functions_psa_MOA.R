@@ -7,7 +7,7 @@ library(tidyr)
 library(cmapR)
 library(ggplot2)
 
-targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, metadata, target_colname1 = "pert_mechanism", target_colname2 = "pert_target", savefilename = NA, removequery = F){
+targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, metadata, target_colname1 = "pert_target", target_colname2 = "pert_mechanism", savefilename = NA, removequery = F){
   #For reference-based MOA predictions
   #cormatrix_path is the correlation matrix between the query treatments (on columns) and the kabx2 knowns (on rows)
   #query_ids are the ids of the query treatments, if NA then takes all columns
@@ -78,7 +78,7 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
 
 }
 
-refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_cor = F, kabx_annopath= "", target_col = "pert_mechanism", roc_path = '', savefilename, avg_doses = T, print_plot = F, save_all_target_cor = T){
+refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_cor = F, kabx_annopath= "", target_col = "pert_target", roc_path = '', roc_path2 = '', savefilename, avg_doses = T, print_plot = F, save_all_target_cor = T){
   #6/7/22 List prediction for each compound(pert_id)
   #target_list is the output of targetCorrelation, where every query_pert_id has been correlated to a maximum from a target category from reference
   #it can either be a list or a data frame
@@ -87,6 +87,8 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
   #annotation file requires pert_type = poscon, negcon or test. defines "unknowns" as "test" compounds
   #if avg_doses = T, then will use the mean of the correlations across doses (this is default). If F, then will use the max across all doses.
   #if save_all_target_cor = T, then will save RDS files of max correlations to all targets, useful for plotting purposes later
+  #roc_path should give the positive predictive value of predicting the target_col (usually pert_target), given the correlation threshold. Will ignore if no input.
+  #roc_path2 should give the positive predictive value of predicting the mechanism (based directly on the target prediction), given the correlation threshold. Will ignore if no input.
   
   #Outputs target predictions for each compound in a .csv file
   #subsets known (in reference set) vs unknowns (not in reference set)
@@ -252,7 +254,15 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       group_by(query_pert_id, kabx_target, mean_compcor, mean_compcor_norm, precision) %>%
       summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
-    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "positive_predictive_value", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
+    colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", paste("positive_predictive_value", target_col, sep = "_"), "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
+    
+    #Add additional PPV if desired (e.g. for mechanism)
+    if(is.na(roc_path2) | roc_path2 == ""){
+      kabx2_rocinfo2 = readRDS(roc_path2)
+      unknown_df_output_anno$threshold_idx2 = sapply(unknown_df_output_anno$target_correlation, function(x){max(which(x > kabx2_rocinfo2$threshold))})
+      unknown_df_output_anno$positive_predictive_value2 = kabx2_rocinfo2$precision[unknown_df_output_anno$threshold_idx2]
+      unknown_df_output_anno = dplyr::select(unknown_df_output_anno, -threshold_idx2)
+    }
     
     unknown_df_output_anno = arrange(unknown_df_output_anno, desc(target_correlation))
     
@@ -400,7 +410,15 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
       summarise(neighbor_pert_id = paste(unique(neighbor_pert_id), collapse = "|"), pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|")) %>%
       ungroup()
     
-    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", "positive_predictive_value", "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
+    colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", paste("positive_predictive_value", target_col, sep = "_"), "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
+    
+    #Add additional PPV if desired (e.g. for mechanism)
+    if(is.na(roc_path2) | roc_path2 == ""){
+      kabx2_rocinfo2 = readRDS(roc_path2)
+      known_df_output_anno$threshold_idx2 = sapply(known_df_output_anno$target_correlation, function(x){max(which(x > kabx2_rocinfo2$threshold))})
+      known_df_output_anno$positive_predictive_value2 = kabx2_rocinfo2$precision[known_df_output_anno$threshold_idx2]
+      known_df_output_anno = dplyr::select(known_df_output_anno, -threshold_idx2)
+    }
     
     known_df_output_anno = arrange(known_df_output_anno, desc(target_correlation))
     
