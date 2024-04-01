@@ -257,7 +257,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
     colnames(unknown_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", paste("positive_predictive_value", target_col, sep = "_"), "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical class")
     
     #Add additional PPV if desired (e.g. for mechanism)
-    if(is.na(roc_path2) | roc_path2 == ""){
+    if(!is.na(roc_path2) & roc_path2 != ""){
       kabx2_rocinfo2 = readRDS(roc_path2)
       unknown_df_output_anno$threshold_idx2 = sapply(unknown_df_output_anno$target_correlation, function(x){max(which(x > kabx2_rocinfo2$threshold))})
       unknown_df_output_anno$positive_predictive_value2 = kabx2_rocinfo2$precision[unknown_df_output_anno$threshold_idx2]
@@ -413,7 +413,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
     colnames(known_df_output_anno) = c("query_pert_id", "predicted_target", "target_correlation", "normalized_target_correlation", paste("positive_predictive_value", target_col, sep = "_"), "query_pert_iname", "query_pert_mechanism", "query_pert_target", "query_pharmaceutical_class", "neighbor_pert_id", "neighbor_pert_iname", "predicted_pert_mechanism", "predicted_pert_target", "predicted_pharmaceutical_class")
     
     #Add additional PPV if desired (e.g. for mechanism)
-    if(is.na(roc_path2) | roc_path2 == ""){
+    if(!is.na(roc_path2) & roc_path2 != ""){
       kabx2_rocinfo2 = readRDS(roc_path2)
       known_df_output_anno$threshold_idx2 = sapply(known_df_output_anno$target_correlation, function(x){max(which(x > kabx2_rocinfo2$threshold))})
       known_df_output_anno$positive_predictive_value2 = kabx2_rocinfo2$precision[known_df_output_anno$threshold_idx2]

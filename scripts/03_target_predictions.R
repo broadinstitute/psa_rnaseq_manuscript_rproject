@@ -66,12 +66,15 @@ targetCorrelation(cormatrix_path = cormat_path, query_ids = query_ids, reference
 ####Make reference-based MOA predictions
 #Chooses which file to use to report positive predictive values (PPV) from leave-one-compound-out analysis, based on zscores or nzscores
 if(metric == "nzscore"){
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_compound_include_singles_queryposcon_nzscore_vs_zscore_230919_pert_target.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_compound_include_singles_queryposcon_nzscore_vs_zscore_230919_pert_target_add_NA.rds'
+  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_queryposcon_nzscore_vs_zscore_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }else if(metric == "zscore"){
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target_add_NA.rds'
+  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }else{
   print("Could not match metric values. PPV will be based on zscores.")
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target_add_NA.rds'
+  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }
 avg_doses1 = T #True averages the maximal correlation of each target category across treatments (e.g. doses, time points, etc.)
 
@@ -84,7 +87,7 @@ if(file.exists(savefilename1)){
 }
 
 #Make prediction table
-refBasedList_compound(target_list_path = filename1, rank_thresh = 1, kabx_annopath = anno, target_col = colname1, roc_path = roc_path1, normalized_cor = F, savefilename = savefilename1, print_plot = F, avg_doses = avg_doses1)
+refBasedList_compound(target_list_path = filename1, rank_thresh = 1, kabx_annopath = anno, target_col = colname1, roc_path = roc_path1, roc_path2 = roc_path2, normalized_cor = F, savefilename = savefilename1, print_plot = F, avg_doses = avg_doses1)
 print(paste0("Output prediction files start with: ", savefilename1))
 
 ##########Plots###########
