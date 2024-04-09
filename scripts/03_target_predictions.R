@@ -43,8 +43,10 @@ cdesc = cor_mat@cdesc
 rdesc = cor_mat@rdesc
 cor_mat = cor_mat@mat
 
-#Extract query IDs from column metadata
-query_df = filter(cdesc, tolower(project_id) == tolower(project_id0) & !(tolower(pert_id) %in% c("water", "dmso")))
+#Extract query IDs from column metadata 
+# query_df = filter(cdesc, tolower(project_id) == tolower(project_id0) & !(tolower(pert_id) %in% c("water", "dmso")))
+query_data = parse_gctx(query_data_path)
+query_df = query_data@cdesc
 query_ids = query_df$id
 query_pert_ids = unique(query_df$pert_id)
 
@@ -69,11 +71,11 @@ if(metric == "nzscore"){
   roc_path1 = './reference_files/kabx_rocinfo_avg_cor_compound_include_singles_queryposcon_nzscore_vs_zscore_230919_pert_target_add_NA.rds'
   roc_path2 = './reference_files/kabx_rocinfo_avg_cor_queryposcon_nzscore_vs_zscore_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }else if(metric == "zscore"){
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target_add_NA.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_pert_target_add_NA.rds'
   roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }else{
   print("Could not match metric values. PPV will be based on zscores.")
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_zscore_230918_pert_target_add_NA.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_pert_target_add_NA.rds'
   roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }
 avg_doses1 = T #True averages the maximal correlation of each target category across treatments (e.g. doses, time points, etc.)
