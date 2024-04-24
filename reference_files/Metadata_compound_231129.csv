@@ -1,40 +1,40 @@
-"pert_id","pert_iname","pharmaceutical_class","pert_target","pert_mechanism","pert_submechanism","pert_type","vehicle"
-"a22","A22","Dichlorobenzyl isothiourea","MreB","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","dmso"
-"ami","Amikacin","Aminoglycoside","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","water"
-"carb","Carbenicillin","B-lactam","PBP","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","water"
-"cbr4830","CBR-4830","Indole","MreB","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","dmso"
-"ceftaz","Ceftazidime","B-lactam","PBP","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","water"
-"chir090","CHIR-090","Hydroxamic acid","LpxC","Membrane Integrity","LPS biosynthesis","poscon","dmso"
-"cip","Ciprofloxacin","Quinolone","GyrA","DNA synthesis","DNA synthesis","poscon","water"
-"cisp","Cisplatin","DNA alkalyating agent","DNA","DNA synthesis","DNA synthesis","poscon","dmso"
-"clari","Clarithomycin","Macrolide","50s ribosomal subunit","Protein synthesis","Protein synthesis","poscon","dmso"
-"col","Colistin","AMP","LPS","Membrane Integrity","Inner membrane toxicity","poscon","water"
-"dmso","DMSO","Negative control","Negative control","Negative control","Negative control","negcon","dmso"
-"dox","Doxorubicin","DNA intercalator","DNA","DNA synthesis","DNA intercalator","poscon","dmso"
-"doxy","Doxycycline","Tetracycline","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","water"
-"erythro","Erythromycin","Macrolide","50s ribosomal subunit","Protein synthesis","Protein synthesis","poscon","dmso"
-"fosfo","Fosfomycin","Phosphonic antibiotics","MurA","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","water"
-"fosmido","Fosmidomycin","Organic phosphonic acid","Dxr","Membrane Integrity","Isoprenoid biosynthesis","poscon","water"
-"gent","Gentamicin","Aminoglycoside","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","water"
-"hu","Hydroxyurea","Antimetabolite","RnR","DNA synthesis","DNA synthesis","poscon","water"
-"imi","Imipenem","B-lactam","PBP","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","water"
-"levo","Levofloxacin","Quinolone","GyrA","DNA synthesis","DNA synthesis","poscon","water"
-"ll37","LL-37","AMP","Membrane","Membrane Integrity","Membrane disruptor","poscon","water"
-"mero","Meropenem","B-lactam","PBP","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","dmso"
-"mino","Minocycline","Tetracycline","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","dmso"
-"mrl494","MRL-494","Unknown","BamA","Membrane Integrity","OMP assembly","poscon","dmso"
-"nitro","Nitrofurantoin","imidazolidinedione","DNA","DNA synthesis","DNA synthesis/ROS","poscon","dmso"
-"novo","Novobiocin","Aminocoumarin","GyrB","DNA synthesis","DNA synthesis","poscon","dmso"
-"pf3299","PF-04753299","Hydroxamic acid","LpxC","Membrane Integrity","LPS biosynthesis","poscon","dmso"
-"pf1090","PF-5081090","Hydroxamic acid","LpxC","Membrane Integrity","LPS biosynthesis","poscon","dmso"
-"pip","Piperacillin","B-lactam","PBP","Peptidoglycan biogenesis","Cell wall biogenesis","poscon","water"
-"pol7001","POL-7001","AMP","LptD","Membrane Integrity","LPS transport","poscon","dmso"
-"pol7080","POL-7080","AMP","LptD","Membrane Integrity","LPS transport","poscon","dmso"
-"pg1","Protegrin-1","AMP","LPS","Membrane Integrity","Membrane Integrity","poscon","dmso"
-"rad","Radicicol","Macrocycle","Histidine kinases","DNA synthesis","Cell cycle arrest","poscon","dmso"
-"rif","Rifampin","Ansamycins","RpoB","Protein synthesis","Transcription","poscon","dmso"
-"tet","Tetracycline","Tetracycline","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","water"
-"thio","Thiolactomycin","Thiolactone","KasA","Membrane Integrity","Fatty acid synthesis","poscon","dmso"
-"tobra","Tobramycin","Aminoglycoside","30S ribosomal subunit","Protein synthesis","Protein synthesis","poscon","water"
-"tmp","Trimethoprim","Folate analog","DhfR","DNA synthesis","Folate synthesis","poscon","dmso"
-"water","water","Negative control","Negative control","Negative control","Negative control","negcon","water"
+pert_id,pert_iname,pharmaceutical_class,pert_target,pert_mechanism,pert_submechanism,pert_type,vehicle
+a22,A22,Dichlorobenzyl isothiourea,MreB,Peptidoglycan synthesis,Cell wall biogenesis,poscon,dmso
+ami,Amikacin,Aminoglycoside,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,water
+carb,Carbenicillin,B-lactam,PBP,Peptidoglycan synthesis,Cell wall biogenesis,poscon,water
+cbr4830,CBR-4830,Indole,MreB,Peptidoglycan synthesis,Cell wall biogenesis,poscon,dmso
+ceftaz,Ceftazidime,B-lactam,PBP,Peptidoglycan synthesis,Cell wall biogenesis,poscon,water
+chir090,CHIR-090,Hydroxamic acid,LpxC,Membrane Integrity,LPS biosynthesis,poscon,dmso
+cip,Ciprofloxacin,Quinolone,GyrA/ParC,DNA synthesis,DNA synthesis,poscon,water
+cisp,Cisplatin,DNA alkalyating agent,DNA,DNA synthesis,DNA synthesis,poscon,dmso
+clari,Clarithomycin,Macrolide,50s ribosomal subunit,Protein synthesis,Protein synthesis,poscon,dmso
+col,Colistin,AMP,LPS,Membrane Integrity,Inner membrane toxicity,poscon,water
+dmso,DMSO,Negative control,Negative control,Negative control,Negative control,negcon,dmso
+dox,Doxorubicin,DNA intercalator,DNA,DNA synthesis,DNA intercalator,poscon,dmso
+doxy,Doxycycline,Tetracycline,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,water
+erythro,Erythromycin,Macrolide,50s ribosomal subunit,Protein synthesis,Protein synthesis,poscon,dmso
+fosfo,Fosfomycin,Phosphonic antibiotics,MurA,Peptidoglycan synthesis,Cell wall biogenesis,poscon,water
+fosmido,Fosmidomycin,Organic phosphonic acid,Dxr,Membrane Integrity,Isoprenoid biosynthesis,poscon,water
+gent,Gentamicin,Aminoglycoside,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,water
+hu,Hydroxyurea,Antimetabolite,RnR,DNA synthesis,DNA synthesis,poscon,water
+imi,Imipenem,B-lactam,PBP,Peptidoglycan synthesis,Cell wall biogenesis,poscon,water
+levo,Levofloxacin,Quinolone,GyrA/ParC,DNA synthesis,DNA synthesis,poscon,water
+ll37,LL-37,AMP,Membrane,Membrane Integrity,Membrane disruptor,poscon,water
+mero,Meropenem,B-lactam,PBP,Peptidoglycan synthesis,Cell wall biogenesis,poscon,dmso
+mino,Minocycline,Tetracycline,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,dmso
+mrl494,MRL-494,Unknown,BamA,Membrane Integrity,OMP assembly,poscon,dmso
+nitro,Nitrofurantoin,imidazolidinedione,DNA,DNA synthesis,DNA synthesis/ROS,poscon,dmso
+novo,Novobiocin,Aminocoumarin,GyrB,DNA synthesis,DNA synthesis,poscon,dmso
+pf3299,PF-04753299,Hydroxamic acid,LpxC,Membrane Integrity,LPS biosynthesis,poscon,dmso
+pf1090,PF-5081090,Hydroxamic acid,LpxC,Membrane Integrity,LPS biosynthesis,poscon,dmso
+pip,Piperacillin,B-lactam,PBP,Peptidoglycan synthesis,Cell wall biogenesis,poscon,water
+pol7001,POL-7001,AMP,LptD,Membrane Integrity,LPS transport,poscon,dmso
+pol7080,POL-7080,AMP,LptD,Membrane Integrity,LPS transport,poscon,dmso
+pg1,Protegrin-1,AMP,LPS,Membrane Integrity,Membrane Integrity,poscon,dmso
+rad,Radicicol,Macrocycle,Histidine kinases,DNA synthesis,Cell cycle arrest,poscon,dmso
+rif,Rifampin,Ansamycins,RpoB,Protein synthesis,Transcription,poscon,dmso
+tet,Tetracycline,Tetracycline,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,water
+thio,Thiolactomycin,Thiolactone,KasA,Membrane Integrity,Fatty acid synthesis,poscon,dmso
+tobra,Tobramycin,Aminoglycoside,30S ribosomal subunit,Protein synthesis,Protein synthesis,poscon,water
+tmp,Trimethoprim,Folate analog,DhfR,DNA synthesis,Folate synthesis,poscon,dmso
+water,water,Negative control,Negative control,Negative control,Negative control,negcon,water
