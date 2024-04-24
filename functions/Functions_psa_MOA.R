@@ -511,7 +511,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_point(size = 2)+
     #geom_text(label = paste0("Closest compound: \n", closest_compound), x = 18, y = 0.95, size = 4.5, font_face = "plain")+
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
-    labs(x = "Target", y = "Pearson Correlation", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
+    labs(x = "Target", y = "Similarity Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
     facet_grid(~predicted_pert_mechanism_factor, space="free_x", scales = "free_x")+
     ylim(-0.2,1)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan biogenesis" = "green4", "Protein synthesis" = "magenta3"))+
@@ -528,7 +528,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_point(size = 2)+
     #geom_text(label = paste0("Closest compound: \n", closest_compound), x = 18, y = 0.95, size = 4.5, font_face = "plain")+
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
-    labs(x = "Target", y = "Pearson Correlation", title = pert_iname0, color = "Mechanism")+
+    labs(x = "Target", y = "Similarity Score", title = pert_iname0, color = "Mechanism")+
     ylim(-0.2,1)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan biogenesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
