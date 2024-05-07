@@ -100,7 +100,7 @@ combine_gct = function(ref_data_path, query_data_path, save_file_path, save_form
     stop("Rownames do not match. Cannot concatenate matrices")
   }
   
-  if(ref_data_mat_sub == query_data_mat_sub){
+  if(all(ref_data_mat_sub == query_data_mat_sub)){
     print("Warning: query and reference are the same. Returning reference matrix")
     combined_mat = ref_data_mat_sub
   }else if(any(colnames(query_data_mat_sub) %in% colnames(ref_data_mat_sub))){
