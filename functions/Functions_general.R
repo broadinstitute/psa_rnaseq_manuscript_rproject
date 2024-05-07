@@ -100,7 +100,15 @@ combine_gct = function(ref_data_path, query_data_path, save_file_path, save_form
     stop("Rownames do not match. Cannot concatenate matrices")
   }
   
-  combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
+  if(ref_data_mat_sub == query_data_mat_sub){
+    print("Warning: query and reference are the same. Returning reference matrix")
+    combined_mat = ref_data_mat_sub
+  }else if(any(colnames(query_data_mat_sub) %in% colnames(ref_data_mat_sub))){
+    print("Warning: some column names in query were the same as reference. Resulting column names may be modified.")
+    combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
+  }else{
+    combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
+  }
   num_row = dim(combined_mat)[1]
   num_col = dim(combined_mat)[2]
   
