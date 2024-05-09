@@ -100,15 +100,31 @@ combine_gct = function(ref_data_path, query_data_path, save_file_path, save_form
     stop("Rownames do not match. Cannot concatenate matrices")
   }
   
-  if(all(ref_data_mat_sub == query_data_mat_sub)){
-    print("Warning: query and reference are the same. Returning reference matrix")
-    combined_mat = ref_data_mat_sub
+  if(identical(dim(ref_data_mat_sub), dim(query_data_mat_sub))){
+    if(all(ref_data_mat_sub == query_data_mat_sub)){
+      print("Warning: query and reference are the same. Returning reference matrix")
+      combined_mat = ref_data_mat_sub 
+    }else if(any(colnames(query_data_mat_sub) %in% colnames(ref_data_mat_sub))){
+      print("Warning: some sample names in query were the same as reference. Resulting column names will have 'query:' or 'ref:' added to the beginning.")
+      colnames(ref_data_mat_sub)=paste0("ref:", colnames(ref_data_mat_sub))
+      colnames(query_data_mat_sub) = paste0("query:", colnames(query_data_mat_sub))
+      ref_data_cdesc = dplyr::mutate(ref_data_cdesc, id = paste0("ref:", id))
+      query_data_cdesc = dplyr::mutate(query_data_cdesc, id = paste0("query:", id))
+      combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
+    }else{
+      combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
+    }
   }else if(any(colnames(query_data_mat_sub) %in% colnames(ref_data_mat_sub))){
-    print("Warning: some column names in query were the same as reference. Resulting column names may be modified.")
+    print("Warning: some sample names in query were the same as reference. Resulting column names will have 'query:' or 'ref:' added to the beginning.")
+    colnames(ref_data_mat_sub)=paste0("ref:", colnames(ref_data_mat_sub))
+    colnames(query_data_mat_sub) = paste0("query:", colnames(query_data_mat_sub))
+    ref_data_cdesc = dplyr::mutate(ref_data_cdesc, id = paste0("ref:", id))
+    query_data_cdesc = dplyr::mutate(query_data_cdesc, id = paste0("query:", id))
     combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
   }else{
     combined_mat = base::cbind(ref_data_mat_sub, query_data_mat_sub)
   }
+  
   num_row = dim(combined_mat)[1]
   num_col = dim(combined_mat)[2]
   

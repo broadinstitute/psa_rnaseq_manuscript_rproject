@@ -53,17 +53,23 @@ query_pert_ids = unique(query_df$pert_id)
 ######Predict target#####################
 colname1 = "pert_target" #This is the column we will try to predict on
 colname2 = "pert_mechanism"
-filename1 = paste0(outdir, screen_name, '_refbased_moa_target_keep_query_comp_', date0, '.rds')
+
+#Keep query compounds in reference even if they're the same as the query compounds
+remove_query0 = FALSE #keep as false unless doing a leave one out cross validation
+if(remove_query0){
+  remove_query_label = "remove_query_comp"
+}else{
+  remove_query_label = "keep_query_comp"
+}
+
+filename1 = paste0(outdir, screen_name, '_refbased_moa_target_', remove_query_label, "_", date0, '.rds')
 if(file.exists(filename1)){
   print("Warning: file exists, will overwrite")
   print(filename1)
 }
 
-#Keep query compounds in reference even if they're the same as the query compounds
-remove_query0 = FALSE
-
 #This function for each treatment (comp_conc), gives the maximally correlated ref compound per target category (colname1)
-targetCorrelation(cormatrix_path = cormat_path, query_ids = query_ids, reference_ids = reference_ids, metadata = cdesc, target_colname1 = colname1, target_colname2 = colname2, removequery = remove_query0, savefilename = filename1)
+targetCorrelation(cormatrix_path = cormat_path, query_ids = query_ids, reference_ids = reference_ids, sample_meta = cdesc, compound_meta = anno, target_colname1 = colname1, target_colname2 = colname2, removequery = remove_query0, savefilename = filename1)
 
 ####Make reference-based MOA predictions
 #Chooses which file to use to report positive predictive values (PPV) from leave-one-compound-out analysis, based on zscores or nzscores
@@ -78,11 +84,17 @@ if(metric == "nzscore"){
   roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_pert_target_add_NA.rds'
   roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }
+
 avg_doses1 = T #True averages the maximal correlation of each target category across treatments (e.g. doses, time points, etc.)
+if(avg_doses1){
+  avg_label = "avg_doses"
+}else{
+  avg_label = "max_across_trts"
+}
 
 #Make a list of predictions
 savefilepath = outdir
-savefilename1 = paste0(savefilepath, paste(screen_name,'refbasedMOA', 'avg_doses_keep_query_comp', date0, colname1, sep = "_"))
+savefilename1 = paste0(savefilepath, paste(screen_name,'refbasedMOA', avg_label, remove_query_label, date0, colname1, sep = "_"))
 if(file.exists(savefilename1)){
   print("Warning: file exists, will overwrite")
   print(savefilename1)

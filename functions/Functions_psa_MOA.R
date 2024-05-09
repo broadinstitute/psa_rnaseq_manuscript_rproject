@@ -7,7 +7,7 @@ library(tidyr)
 library(cmapR)
 library(ggplot2)
 
-targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, metadata, target_colname1 = "pert_target", target_colname2 = "pert_mechanism", savefilename = NA, removequery = F){
+targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA, sample_meta, compound_meta, target_colname1 = "pert_target", target_colname2 = "pert_mechanism", savefilename = NA, removequery = F){
   #For reference-based MOA predictions
   #cormatrix_path is the correlation matrix between the query treatments (on columns) and the kabx2 knowns (on rows)
   #query_ids are the ids of the query treatments, if NA then takes all columns
@@ -16,6 +16,8 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
   #Find maxmimally correlated treatment from each target class
   #Includes normalized and non-normalized values of the maximum correlation from each target class to the treatment
   #removeanyWK only feeds into calling active treatments, not into ranking of targets (there, well killers are always included)
+  #sample_meta includes sample metadata (id, pert_id, pert_dose, pert_time, strain_id, project_id)
+  #compound_meta includes compound metadata (target_colname1, target_colname2, etc.)
   #Return: data frame with all treatments and their maximum correlation values to each target class
   
   #correlation matrix, rows are kabx, and columns are queries
@@ -30,23 +32,42 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
     reference_ids = row_meta$id
   }
   
+  #Load metadata
+  if(is.character(sample_meta)){
+    sample_meta = read.csv(sample_meta, stringsAsFactors = F)
+  }else{
+    #assumes the data frame or table has been passed in
+    sample_meta = sample_meta
+  }
+  
+  if(is.character(compound_meta)){
+    compound_meta = read.csv(compound_meta, stringsAsFactors = F)
+  }else{
+    #assumes the data frame or table has been passed in
+    compound_meta = compound_meta
+  }
+  
   cormat = parse_gctx(cormatrix_path, cid = which(col_meta$id %in% query_ids), rid = which(row_meta$id %in% reference_ids)) 
   cormat_df = as.data.frame(cormat@mat)
   cormat_df$kabx_id = rownames(cormat_df)
   cormat_lf = tidyr::gather(cormat_df, key = "query_id", value = "CompoundCorrelation", -kabx_id)
 
   
-  colnames(metadata)[colnames(metadata)==target_colname1] = "target"
-  colnames(metadata)[colnames(metadata)==target_colname2] = "target2"
+  colnames(compound_meta)[colnames(compound_meta)==target_colname1] = "target"
+  colnames(compound_meta)[colnames(compound_meta)==target_colname2] = "target2"
   
-  #add compound metadata for query
-  metadata_select = select(metadata, id, pert_id, pert_dose, pert_time, strain_id, project_id)
-  colnames(metadata_select) = paste0("query_", colnames(metadata_select))
-  cormat_lf_anno = left_join(cormat_lf, metadata_select, by = "query_id")
+  #add sample metadata for query
+  metadata_select = dplyr::select(sample_meta, id, pert_id, pert_dose, pert_time, strain_id, project_id)
+  query_sample_meta = metadata_select
+  colnames(query_sample_meta) = paste0("query_", colnames(query_sample_meta))
+  cormat_lf_anno = dplyr::left_join(cormat_lf, query_sample_meta, by = "query_id")
+  rm(query_sample_meta)
   
-  #metadata for poscons
-  colnames(metadata) = paste0("kabx_", colnames(metadata))
-  cormat_lf_anno = left_join(cormat_lf_anno, metadata, by = "kabx_id")
+  #add sample and compound metadata for poscons
+  colnames(metadata_select) = paste0("kabx_", colnames(metadata_select))
+  colnames(compound_meta) = paste0("kabx_", colnames(compound_meta))
+  cormat_lf_anno = dplyr::left_join(cormat_lf_anno, metadata_select, by = "kabx_id")
+  cormat_lf_anno = dplyr::left_join(cormat_lf_anno, compound_meta, by = "kabx_pert_id")
   
   #Double check to remove compounds with no annotation
   #Make sure there are no redundancies, reduce to only target information
@@ -55,7 +76,7 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
   cormat_lf_anno = distinct(cormat_lf_anno)
   
   
-  if(removequery){#remove query pert_id, only needed if testing with knowns
+  if(removequery){#remove query pert_id, only needed if testing with knowns for cross validation
     cormat_lf_anno = filter(cormat_lf_anno, kabx_pert_id != query_pert_id) 
   }
   
@@ -474,7 +495,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
   max_cor_df_filt = arrange(max_cor_df_filt, desc(target_correlation))
 
   #color code the x labels by mechanism
-  mech_color_df = data.frame(pert_mechanism = c("Negative control", "DNA synthesis", "Membrane Integrity", "Peptidoglycan biogenesis", "Protein synthesis"), mech_color = c("black", "red", "blue","green4","magenta3"))
+  mech_color_df = data.frame(pert_mechanism = c("Negative control", "DNA synthesis", "Membrane Integrity", "Peptidoglycan synthesis", "Protein synthesis"), mech_color = c("black", "red", "blue","green4","magenta3"))
   target_mech_list = select(max_cor_df_filt, predicted_target, predicted_pert_mechanism) %>% distinct()
   target_mech_list = left_join(target_mech_list, mech_color_df, by = c("predicted_pert_mechanism" = "pert_mechanism"))
   color_vec = target_mech_list$mech_color
@@ -514,7 +535,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     labs(x = "Target", y = "Similarity Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
     facet_grid(~predicted_pert_mechanism_factor, space="free_x", scales = "free_x")+
     ylim(-0.2,1)+
-    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan biogenesis" = "green4", "Protein synthesis" = "magenta3"))+
+    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -530,7 +551,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
     labs(x = "Target", y = "Similarity Score", title = pert_iname0, color = "Mechanism")+
     ylim(-0.2,1)+
-    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan biogenesis" = "green4", "Protein synthesis" = "magenta3"))+
+    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, colour = color_vec))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank(),
