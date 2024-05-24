@@ -18,7 +18,7 @@ date0 = "231128"
 query_data_path = './data_tables/external_data/GSE166602_mod_nzscore_n3x5894.gct'
 
 ###Get path to reference data######################
-ref_data_path = './data_tables/reference_set/moc1430_1779_0066_0110_2kd_modzscore_ref_set_n250x5679.gct'
+ref_data_path = './data_tables/antimicrobial_reference_set/moc1430_1779_0066_0110_2kd_modzscore_ref_set_n250x5679.gct'
 
 save_combined_path = paste0(outdir, screen_name, '_ref_combined_modzscore_', date0)
 save_cormat_path = paste0(outdir, screen_name, '_ref_combined_modzscore_cor_mat_', date0)
@@ -77,12 +77,12 @@ if(metric == "nzscore"){
   roc_path1 = './reference_files/kabx_rocinfo_avg_cor_compound_include_singles_queryposcon_nzscore_vs_zscore_230919_pert_target_add_NA.rds'
   roc_path2 = './reference_files/kabx_rocinfo_avg_cor_queryposcon_nzscore_vs_zscore_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
 }else if(metric == "zscore"){
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_pert_target_add_NA.rds'
-  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_zscore_vs_zscore_pert_target_add_NA.rds'
+  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_zscore_vs_zscore_pert_target_mechanism_add_NA.rds'
 }else{
   print("Could not match metric values. PPV will be based on zscores.")
-  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_pert_target_add_NA.rds'
-  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_pert_target_mechanism_add_NA.rds'
+  roc_path1 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_230918_zscore_vs_zscore_pert_target_add_NA.rds'
+  roc_path2 = './reference_files/kabx_rocinfo_avg_cor_by384well_bystrain_compound_include_singles_240328_zscore_vs_zscore_pert_target_mechanism_add_NA.rds'
 }
 
 avg_doses1 = T #True averages the maximal correlation of each target category across treatments (e.g. doses, time points, etc.)
