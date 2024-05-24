@@ -1,5 +1,5 @@
 # Table of Contents
-Scripts and data files used for PsA RNAseq manuscript
+Scripts and data files used for manuscript: Perturbation-specific transcriptional mapping facilitiates unbiased target elucidation of antibiotics
 
 ## R project file
 Open psa_rnaseq_manuscript.Rproj file to easily access all scripts and data mentioned below.
