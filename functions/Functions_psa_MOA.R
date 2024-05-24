@@ -453,7 +453,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
   }
 }
 
-plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size = 14, save_file_path = NA){
+plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size = 14, save_file_path = NA, pdf_width = 7, pdf_height = 5){
   #Inputs results from MOA prediction from refBasedList_compound
   #pert_id is the query compound 
   #all_max_cor_df is a data frame output when running refBasedList_compound, which has the maximal correlation from each target category to the query (after collapsing doses etc.)
@@ -493,7 +493,11 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
   
   pert_iname0 = unique(max_cor_df_filt$query_pert_iname)
   max_cor_df_filt = arrange(max_cor_df_filt, desc(target_correlation))
-
+  
+  #change from old annotation
+  max_cor_df_filt$predicted_target = replace(max_cor_df_filt$predicted_target, list = (tolower(max_cor_df_filt$predicted_target) == "gyra"), "GyrA/ParC")
+  max_cor_df_filt$predicted_pert_mechanism = replace(max_cor_df_filt$predicted_pert_mechanism, list = (tolower(max_cor_df_filt$predicted_pert_mechanism) == "peptidoglycan biogenesis"), "Peptidoglycan synthesis")
+  
   #color code the x labels by mechanism
   mech_color_df = data.frame(pert_mechanism = c("Negative control", "DNA synthesis", "Membrane Integrity", "Peptidoglycan synthesis", "Protein synthesis"), mech_color = c("black", "red", "blue","green4","magenta3"))
   target_mech_list = select(max_cor_df_filt, predicted_target, predicted_pert_mechanism) %>% distinct()
@@ -532,7 +536,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_point(size = 2)+
     #geom_text(label = paste0("Closest compound: \n", closest_compound), x = 18, y = 0.95, size = 4.5, font_face = "plain")+
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
-    labs(x = "Target", y = "Similarity Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
+    labs(x = "Target", y = "Target Correlation Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
     facet_grid(~predicted_pert_mechanism_factor, space="free_x", scales = "free_x")+
     ylim(-0.2,1)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
@@ -549,7 +553,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_point(size = 2)+
     #geom_text(label = paste0("Closest compound: \n", closest_compound), x = 18, y = 0.95, size = 4.5, font_face = "plain")+
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
-    labs(x = "Target", y = "Similarity Score", title = pert_iname0, color = "Mechanism")+
+    labs(x = "Target", y = "Target Correlation Score", title = pert_iname0, color = "Mechanism")+
     ylim(-0.2,1)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
@@ -561,7 +565,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
   plot_list = list(p0, p1)
   
   if(!is.na(save_file_path)){
-    pdf(save_file_path, width = 7, height = 5)
+    pdf(save_file_path, width = pdf_width, height = pdf_height)
     print(p0)
     dev.off()
   }else{
