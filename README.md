@@ -19,7 +19,7 @@ The data_tables folder includes the z-scores or nz-scores of the various data se
 * internal_test_compounds: z-score or nz-score values of treatments of compounds with unknown mechanism. Tested internally.
 * external_data: z-score and nz-score values of publicly available data PRJNA291292
 * hypomorph_zscore_across_strains: z-score values of a subset of the reference set to assess hypomorph transcriptional signatures, where batch is re-defined as 384 well plate and time-point (allowing strains to be different within the batch)
-* crispri_strains: z-scores for CRISPRi strains
+* crispri_strains: z-scores for CRISPRi strains, subset by transcriptional profiles used in the CRISPRi reference set
 
 ## Reference Files
 Reference files used for annotation or inputs to functions
