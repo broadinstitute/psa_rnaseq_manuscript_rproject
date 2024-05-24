@@ -24,7 +24,7 @@ The data_tables folder includes the z-scores or nz-scores of the various data se
 ## Reference Files
 Reference files used for annotation or inputs to functions
 * Compound metadata for reference compounds
-* kabx_rocinfo...zscore...rds is an input file for running target prediction function for queries that are z-scores, for assigning positive predictive values
-* kabx_rocinfo...zscore...mechanism...rds is an input file for mechanism prediction for queries that are z-scores, for assigning positive predictive values
-* kabx_rocinfo...nzscore_vs_zscore...rds is an input file for running target prediction function for queries that are nz-scores, for assigning positive predictive values
-* kabx_rocinfo...nzscore_vs_zscore...mechanism...rds is an input file for mechanism prediction for queries that are nz-scores, for assigning positive predictive values
+* kabx_rocinfo...zscore...rds is an input file for running target prediction function for queries that are z-scores, for assigning target positive predictive values
+* kabx_rocinfo...zscore...mechanism...rds is an input file for mechanism prediction for queries that are z-scores, for assigning mechanism positive predictive values
+* kabx_rocinfo...nzscore_vs_zscore...rds is an input file for running target prediction function for queries that are nz-scores, for assigning target positive predictive values
+* kabx_rocinfo...nzscore_vs_zscore...mechanism...rds is an input file for mechanism prediction for queries that are nz-scores, for assigning mechanism positive predictive values
