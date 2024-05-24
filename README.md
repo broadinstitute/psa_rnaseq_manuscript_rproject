@@ -6,7 +6,7 @@ Open psa_rnaseq_manuscript.Rproj file to easily access all scripts and data ment
 
 ## Scripts
 * 01_qc_and_vst.Rmd: Script for QC reads and calcuating vst</li>
-* 02a_calculate_mod_zscore.Rmd: Calculate moderated z-scores (if you have variety of drug treatments)</li>
+* 02a_calculate_mod_zscore.Rmd: Calculate moderated z-scores (if you have diverse set of treatments)</li>
 * 02a_calculate_mod_nzscore.Rmd: Calculate moderated nz-scores (z-scores relative to negative control)</li>
 * 03_target_predictions.R: Predict targets of query compounds</li>
 
