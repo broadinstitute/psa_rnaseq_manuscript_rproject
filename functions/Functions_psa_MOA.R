@@ -478,7 +478,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
   
   kabx_anno_collapse = kabx_annotation %>%
     group_by(pert_id) %>%
-    summarise(pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism ), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|"), pert_type = paste(unique(pert_type), collapse = "|")) %>%
+    summarise(pert_iname = paste(unique(pert_iname), collapse = "|"), pert_mechanism = paste(unique(pert_mechanism), collapse = "|"), pert_target = paste(unique(pert_target), collapse = "|"), pharmaceutical_class = paste(unique(pharmaceutical_class), collapse = "|"), pert_type = paste(unique(pert_type), collapse = "|")) %>%
     ungroup() %>% 
     distinct()
   
@@ -496,10 +496,10 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
   
   #change from old annotation
   max_cor_df_filt$predicted_target = replace(max_cor_df_filt$predicted_target, list = (tolower(max_cor_df_filt$predicted_target) == "gyra"), "GyrA/ParC")
-  max_cor_df_filt$predicted_pert_mechanism = replace(max_cor_df_filt$predicted_pert_mechanism, list = (tolower(max_cor_df_filt$predicted_pert_mechanism) == "peptidoglycan biogenesis"), "Peptidoglycan synthesis")
+  max_cor_df_filt$predicted_pert_mechanism = replace(max_cor_df_filt$predicted_pert_mechanism, list = (tolower(max_cor_df_filt$predicted_pert_mechanism) == "peptidoglycan biogenesis"), "Cell wall synthesis")
   
   #color code the x labels by mechanism
-  mech_color_df = data.frame(pert_mechanism = c("Negative control", "DNA synthesis", "Membrane Integrity", "Peptidoglycan synthesis", "Protein synthesis"), mech_color = c("black", "red", "blue","green4","magenta3"))
+  mech_color_df = data.frame(pert_mechanism = c("Negative control", "DNA synthesis", "Membrane Integrity", "Cell wall synthesis", "Protein synthesis"), mech_color = c("black", "red", "blue","green4","magenta3"))
   target_mech_list = select(max_cor_df_filt, predicted_target, predicted_pert_mechanism) %>% distinct()
   target_mech_list = left_join(target_mech_list, mech_color_df, by = c("predicted_pert_mechanism" = "pert_mechanism"))
   color_vec = target_mech_list$mech_color
@@ -539,7 +539,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     labs(x = "Target", y = "Target Correlation Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
     facet_grid(~predicted_pert_mechanism_factor, space="free_x", scales = "free_x")+
     ylim(-0.2,1)+
-    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
+    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Cell wall synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -555,7 +555,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
     labs(x = "Target", y = "Target Correlation Score", title = pert_iname0, color = "Mechanism")+
     ylim(-0.2,1)+
-    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Peptidoglycan synthesis" = "green4", "Protein synthesis" = "magenta3"))+
+    scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Cell wall synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, colour = color_vec))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank(),
