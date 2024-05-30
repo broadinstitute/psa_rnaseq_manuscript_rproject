@@ -453,7 +453,7 @@ refBasedList_compound = function(target_list_path, rank_thresh = 1, normalized_c
   }
 }
 
-plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size = 14, save_file_path = NA, pdf_width = 7, pdf_height = 5){
+plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size = 14, save_file_path = NA, pdf_width = 7, pdf_height = 5, ylim_low = -0.2, ylim_high = 1){
   #Inputs results from MOA prediction from refBasedList_compound
   #pert_id is the query compound 
   #all_max_cor_df is a data frame output when running refBasedList_compound, which has the maximal correlation from each target category to the query (after collapsing doses etc.)
@@ -538,7 +538,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
     labs(x = "Target", y = "Target Correlation Score", title = paste0(pert_iname0, " (Closest drug: ", closest_compound, ")"), color = "Mechanism")+
     facet_grid(~predicted_pert_mechanism_factor, space="free_x", scales = "free_x")+
-    ylim(-0.2,1)+
+    ylim(ylim_low, ylim_high)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Cell wall synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1))+
@@ -554,7 +554,7 @@ plot_refBasedList = function(pert_id0, all_max_cor_df, kabx_anno_path, text_size
     #geom_text(label = paste0("Closest compound: \n", closest_compound), x = 18, y = 0.95, size = 4.5, font_face = "plain")+
     geom_hline(yintercept = 0, linetype = "dotted", color = "darkgray")+
     labs(x = "Target", y = "Target Correlation Score", title = pert_iname0, color = "Mechanism")+
-    ylim(-0.2,1)+
+    ylim(ylim_low, ylim_high)+
     scale_color_manual(values = c("Negative control" = "black", "DNA synthesis" = "red", "Membrane Integrity" = "blue", "Cell wall synthesis" = "green4", "Protein synthesis" = "magenta3"))+
     theme_bw(base_size = text_size)+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, colour = color_vec))+
