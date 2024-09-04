@@ -15,16 +15,15 @@ Calculate moderated nz-score for RNAseq data. This notebook is to be run after 0
 ```{r}
 #working directory
 wkdir = '/idi/cgtb/jbagnall/psa_RNAseq/git/psa_rnaseq_manuscript_rproject/'
-# wkdir = '/broad/hptmp/jbagnall/GSE166602/'
 
 #output directory
-outdir = '/broad/hptmp/jbagnall/GSE166602/'
+outdir = '/broad/hptmp/jbagnall/Project/'
 
 #run_name is something to identify this data set, will be included in saved file names
-run_name = "GSE166602"
+run_name = "Project"
 
 #project_id0 could be the same as run_name, but is something corresponding to a field in the input data frame to identify this data set
-project_id0 = "PRJNA701395"
+project_id0 = "Project"
 
 #vst file path, VST data calculated in 01_qc_and_vst.Rmd script
 vst_filepath = paste0(outdir, paste(run_name, "vst_remove_low_count_samples_and_genes_n24x5894.gct", sep = "_"))

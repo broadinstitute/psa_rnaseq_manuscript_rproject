@@ -11,11 +11,11 @@ source('./functions/Functions_general.R')
 
 #####User input parameters#################
 metric = "nzscore" #Choose zscore or nzscore based on the metric used for query data, only affects the positive predictive values listed in the final table.
-outdir = '/broad/hptmp/jbagnall/GSE166602/'
-screen_name = "GSE166602"
-project_id0 = "PRJNA701395"
+outdir = '/broad/hptmp/jbagnall/PRJNA291292/'
+screen_name = "PRJNA291292"
+project_id0 = "PRJNA291292"
 date0 = "231128"
-query_data_path = './data_tables/external_data/GSE166602_mod_nzscore_n3x5894.gct'
+query_data_path = './data_tables/external_data/PRJNA291292_mod_nzscore_n15x5077.gct'
 
 ###Get path to reference data######################
 ref_data_path = './data_tables/antimicrobial_reference_set/moc1430_1779_0066_0110_2kd_modzscore_ref_set_n250x5679.gct'

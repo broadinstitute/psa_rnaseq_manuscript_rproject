@@ -41,11 +41,11 @@ source('./functions/Functions_psa_rnaseq_processing.R')
 source('./functions/Functions_general.R')
 source('./functions/Functions_mod_z_score.R')
 
-count_path = '/broad/hptmp/jbagnall/GSE166602/GSE166602_cds_count_table.rds'
+count_path = '/broad/hptmp/jbagnall/Project_cds_count_table.rds'
 counts_include_cds_only = TRUE #If true, does not need to extract cds from gene labels
-outdir = '/broad/hptmp/jbagnall/GSE166602/'
-run_name = "GSE166602"
-project_id0 = "PRJNA701395"
+outdir = '/broad/hptmp/jbagnall/Project/'
+run_name = "Project"
+project_id0 = "Project"
 
 end_char = substr(outdir, nchar(outdir), nchar(outdir))
 if(end_char != "/"){
@@ -64,7 +64,7 @@ gene_meta_path = '/idi/cgtb/jbagnall/psa_RNAseq/annotation/gene_metadata_pao1_ke
 gene_meta = readRDS(gene_meta_path)
 
 #Sample metadata
-sample_meta_path = '/idi/hunglabusers/jbagnall/psa_RNAseq_external/GSE166602/SraRunTable_bioproject_PRJNA701395_JB.csv'
+sample_meta_path = '/idi/hunglabusers/jbagnall/psa_RNAseq_external/Project_sample_metadata.csv'
 sample_meta = read.csv(sample_meta_path, stringsAsFactors = F)
 
 #Compound metadata, may add if desired
