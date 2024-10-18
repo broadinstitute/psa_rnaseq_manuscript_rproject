@@ -57,7 +57,7 @@ targetCorrelation = function(cormatrix_path, query_ids = NA, reference_ids = NA,
   colnames(compound_meta)[colnames(compound_meta)==target_colname2] = "target2"
   
   #add sample metadata for query
-  metadata_select = dplyr::select(sample_meta, id, pert_id, pert_dose, pert_time, strain_id, project_id)
+  metadata_select = dplyr::select(sample_meta, id, pert_id, pert_dose, pert_time, strain_id, project_id) %>% distinct()
   query_sample_meta = metadata_select
   colnames(query_sample_meta) = paste0("query_", colnames(query_sample_meta))
   cormat_lf_anno = dplyr::left_join(cormat_lf, query_sample_meta, by = "query_id")
